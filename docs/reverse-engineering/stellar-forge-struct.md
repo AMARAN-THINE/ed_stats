@@ -206,3 +206,30 @@ backdrop rendered behind the galaxy map, which this function also registers (`Mi
 Both functions are, like `StellarForgeManager`'s init, component/database **registration** code, not generation
 algorithms — consistent with every large `StellarForge*`-named function found so far being part of the setup/data
 layer rather than the noise evaluation itself (which, per the earlier finding, is GPU-side).
+
+## `StellarForgeLiveManager` and the three-tier architecture (complete picture)
+
+`FUN_143c957c0` (`StellarForgeLiveManager`, 2,831 addresses) registers: `FrameOfReferenceShiftHandler` (a
+floating-origin technique — re-centering coordinates around the player to avoid float precision loss far from galaxy
+origin), `LevelRingCellManager`/`LevelRingCellShape` (ring-based spatial cell partitioning, almost certainly the
+streaming/LOD mechanism for loading nearby systems as the player moves), `SpaceLocationComponent`/
+`StaticLocationComponent`, `StarVisualAspect`, and `TextureSliceManager`.
+
+**This completes the picture of what the large `StellarForge*` functions actually are.** None of the six largest
+`StellarForge`-prefixed functions found in this binary are the generation algorithm; they're three distinct
+registration/setup tiers:
+1. **Static galaxy database** — `StellarForgeManager` (regions, Powerplay, overrides) and
+   `StellarForgeAuxiliaryGenerationSource` (chemistry, nebula colours, station databases).
+2. **Runtime/live simulation** — `StellarForgeLiveManager` (frame-of-reference shifting, spatial streaming cells,
+   star visuals) — this is the layer active while flying.
+3. **Map/UI presentation** — `StellarForgeSkyboxMap` (Galaxy Map, System Map, Orrery, and their cameras/renderers).
+
+The remaining six `StellarForge*`-prefixed functions checked (`StellarForgeGeneratorComponents`, `StellarForgeLive`,
+`StellarForgeLiveComponent`, `StellarForgeSimulation`, `StellarForgeSimulationClient`, `StellarForgeUtils`) are all
+the identical minimal RTTI/type-registration stub (112 addresses each, same shape as `StellarForgeGalaxy`
+documented earlier) — pure C++ static-initialization boilerplate, nothing further to extract from them.
+
+**Where this leaves the investigation**: every `StellarForge`-named function reachable by name from this binary has
+now been checked. None contain the noise-evaluation/terrain algorithm itself — that remains confirmed as living in
+the GPU compute shaders (`gpu-terrain-shaders.md`). The CPU side of Stellar Forge, as implemented in this
+executable, is data management, streaming, and presentation around a GPU-computed core.
