@@ -140,3 +140,9 @@ buy/sell/multisell/list-buy/list-sell survey-trade action. This is a third disti
 several endpoint strings," alongside the verified `switch` (vehicle dispatcher) and the multi-constructor pattern
 (colonisation/Powerplay). The lesson generalized across all three checks: this binary's "shared handler" functions
 need to be decompiled individually to know which shape they are — the endpoint-count alone doesn't predict it.
+
+### Crafting endpoint function also confirmed multi-constructor
+
+`FUN_14122e2c0` (`crafting/specials`, `crafting/engineer/pin`) shows two separate top-level vtable resets after the
+shared base constructor — the same multi-constructor pattern as colonisation and Powerplay, not a `switch`. This is
+now confirmed across colonisation, Powerplay, and crafting endpoint clusters.
