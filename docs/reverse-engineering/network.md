@@ -108,3 +108,14 @@ constructor in `codex-journal.md`) rather than string-keyed fields. Its size is 
 module-storage transaction (validation, inventory update, pricing) rather than just building a request. Not resolved
 further in this pass — a hash-table cross-reference against the type-hash constants used elsewhere would be needed to
 recover field semantics.
+
+### Second colonisation function confirms the multi-constructor pattern, not dispatch
+
+`FUN_141183210` (the second colonisation "dispatcher" noted above, covering `claim/deny_starsystems`,
+`management/architect/colonised_systems`, `resources/marketlink/weighting`, `resources/optionsfulllist`) was
+decompiled and checked the same way. It resets `*param_1` to a **new top-level vtable twice** (two separate
+`*param_1 = &PTR_FUN_...` assignments, each starting a fresh object layout, not a chained-constructor sequence) —
+confirming this is a function that builds multiple distinct request-object types one after another, the same
+non-dispatcher pattern already found for `FUN_1411824e0`. This generalizes the earlier correction: both large
+"shared" colonisation functions are multi-object-construction code, not runtime action switches, unlike the vehicle
+dispatcher (`FUN_1424e4fe0`), which is a genuine verified `switch`.
