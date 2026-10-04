@@ -43,3 +43,20 @@ fields shown for a codex entry once discovered.
 The actual `Category`/`SubCategory` value strings (e.g. `Biology`, `Geology`) and the full `Codex_Ent_<id>` catalogue
 are data-driven (likely in a server-delivered or packed resource table), not literal strings in this executable, so
 they are not enumerable from this binary alone.
+
+## Journal writer internals (decompiled)
+
+Five functions implementing the journal file writer were located and decompiled:
+
+| Function | Role |
+|---|---|
+| `FUN_140833e20` (`0x140833e20`) | Builds the `Fileheader` line: pulls language, an `Odyssey` bool (rendered as literal `"true"`/`"false"`, not `1`/`0`), game version and build strings, then formats the header JSON. |
+| `FUN_140832640` (`0x140832640`) | Builds the `Continued` line on file rollover: formats the current time as `"%04d-%02d-%02dT%02d:%02d:%02dZ"`, increments a `Part` counter, writes `{ "timestamp":<ts>, "event":"Continued", "Part":<n> }\r\n`, then calls `FUN_140824c70` to actually start the next file. |
+| `FUN_140834990` (`0x140834990`) | Not yet read in detail; referenced alongside the other two timestamp-building calls. |
+| `FUN_14082b5f0` (`JournalLogging`, 866 addresses) | Not yet read in detail. |
+| `FUN_14082d860` (`0x14082d860`, `JournalFileError`) | Error-recovery path: increments a retry counter at a fixed struct offset and **gives up after 50 attempts** (`if (++count > 0x31) return;`), otherwise builds a `"message"`-keyed string via the object's own vtable `+0x30` slot (likely a `what()`/error-description call) for reporting. |
+
+Confirms (from real code, not just strings) that the journal file format is: a `Fileheader` event on open, one JSON
+line per game event terminated `\r\n`, and a `Continued` event with an incrementing `Part` number when the writer
+rolls over to a new file — matching the multi-part `Journal.<timestamp>.01.log`, `.02.log` naming behavior players
+observe. File-write errors are retried up to 50 times before the writer stops attempting recovery.
