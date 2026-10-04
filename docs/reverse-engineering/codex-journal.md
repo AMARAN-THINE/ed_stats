@@ -478,3 +478,11 @@ service-locator functions and the high-frequency-call candidates in the `Market.
 hit dead ends. The mechanism remains real (confirmed by its effects — zero string literals in affected handlers) but
 unlocated; further progress would need a different method, such as dynamic analysis/tracing, which is out of scope
 for static analysis of this executable alone.
+
+## Legacy exploration-data and carrier trade order schemas
+
+| Event | Fields |
+|---|---|
+| `BuyExplorationData`/`SellExplorationData`/`MultiSellExplorationData` (legacy, pre-Codex) | `System`, `Cost`, `Systems`, `Discovered`, `BaseValue`, `Bonus`, `TotalEarnings`, `SystemName`, `NumBodies` |
+| `RedeemVoucher` | `Type`, `Amount`, `Faction` |
+| `CarrierTradeOrder` | `CarrierID`, `BlackMarket`, `Commodity`, `PurchaseOrder`/`SaleOrder`, `CancelTrade`, `Price` |
