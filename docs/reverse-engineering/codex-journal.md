@@ -448,3 +448,11 @@ Request field: `&suitLoadoutSlotId=`.
 | `MaterialTrade` | `MarketID`, `TraderType`, `Material`/`MaterialID`, `Quantity`, `Paid`, `Received`, `Category` |
 
 These complete the vehicle-launch/dock, repair, and material-trading event groups.
+
+## Misc small event schemas
+
+| Event | Fields |
+|---|---|
+| `Music` | `MusicTrack` |
+| `SetUserShipName` | `Ship`, `ShipID`, `UserShipName`, `UserShipId` |
+| `CrimeVictim` | `Offender` |
