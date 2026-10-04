@@ -275,3 +275,17 @@ journal events most useful to a tool like this repo (`ed_stats`): `CodexEntry`, 
 Additional Powerplay-related identifiers found as class/handler names (not full field lists):
 `PowerplayCarrierSbotageResponder` [sic — "Sbotage" is a typo in the binary, not mine], `PowerplayContact`,
 `PowerplayDefect`, `PowerplayDetails`.
+
+## Engineering, shipyard, outfitting, and material event schemas
+
+| Event | Fields |
+|---|---|
+| `EngineerCraft`/`EngineerLegacyConvert` | `Engineer`, `EngineerID`, `Blueprint`, `BlueprintID`, `Level`, `Ingredients` (`Name`/`Count`), `Override`, `Slot`, `Module`, `Quality`, `IsPreview` |
+| `EngineerContribution` | `Engineer`, `EngineerID`, `Blueprint`, `BlueprintID`, `Type`, `Faction`, `Commodity`, `Material`, `Quantity`, `TotalQuantity`, `ApplyExperimentalEffect` |
+| `ModuleBuy`/`ModuleBuyAndStore`/`ModuleSell`/`ModuleSwap`/`ModuleStore`/`ModuleRetrieve`/`ModuleSellRemote` | `Slot`, `SellItem`/`SellPrice`, `BuyItem`/`BuyPrice`, `FromSlot`/`ToSlot`/`FromItem`/`ToItem`, `Ship`/`ShipID`, `StoredItem`, `InTransit`, `ReplacementItem`/`RetrievedItem`/`SwapOutItem`, `Cost`, `EngineerModifications`, `StorageSlot`, `TransferCost`/`TransferTime`, `RestockVehicle`, `StoredModules`, `StationName`, `MarketID`, `Horizons`, `Hot` |
+| `ShipyardBuy`/`Sell`/`Swap`/`Transfer`/`New`/`Redeem` | `ShipType`, `ShipPrice`, `StoreOldShip`/`SellOldShip`/`SellPrice`, `TransferPrice`/`TransferTime`, `System`, `Distance`, `ShipID`/`SellShipID`/`StoreShipID`/`NewShipID`, `StoredShips`/`ShipsHere`/`ShipsRemote`, `Shipyard`/`PriceList`, `StationName`, `MarketID`, `AllowCobraMkIV`, `Hot`, `ClearImpound`, `BundleID`, `ShipRedeemed`, `ShipyardBankDeposit` |
+| `MaterialCollected`/`MaterialDiscarded`/`MaterialDiscovered` | `Category`, `Name`, `Count`, `DiscoveryNumber` |
+| `Synthesis` | `Name`, `Materials` |
+| `*MicroResources` (Buy/Sell/Trade/Transfer/RequestPower/DeliverPower) | `Name`, `Price`, `Offered`, `Received`, `MarketID`, `TotalCount`, `Direction`, `Context`, `LockerOldCount`/`LockerNewCount` |
+
+This covers the majority of the ship-ownership, engineering, and crafting-related journal events.
