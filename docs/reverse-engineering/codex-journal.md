@@ -138,3 +138,17 @@ appears in the JSON on disk — but recovering them *from the binary's own code*
 these handlers dispatch through, which is a separate, not-yet-attempted piece of work (would need locating the
 hash function and the compile-time hash→field mapping, likely generated at build time and not stored as readable
 strings anywhere in the binary).
+
+### Refinement: two separate JSON code paths (generic reader vs. hashed writer)
+
+The `Status.json` reader (`FUN_142e874a0`, documented earlier) calls a generic string-keyed JSON library
+(`FUN_144c0e4a0` parse, `FUN_144c0db70`/`FUN_144c0db00` has-key/get-key) with literal field names (`"flags"`,
+`"event"`, `"timestamp"`). The four hashed-field handlers above (`Market.json`, `Backpack.json`, `Cargo.json`,
+`ShipLocker.json`) call **none** of those generic JSON functions — confirming these are a genuinely separate code
+path, not just a stylistic difference in the same parser. The most likely explanation: the game **reads** its own
+status files back with the fast/simple generic JSON parser (it only needs a few top-level fields to decide what
+changed), but **writes** them via a compile-time reflection/serialization system keyed by hashed field tags, matching
+the pattern already confirmed for the `StellarForgeInput*` struct serializer in `stellar-forge-struct.md` and the
+`CodexEntry`/`ScanOrganic` constructors. This is consistent, not coincidental: the same internal serialization
+framework appears to be reused for Stellar Forge planet parameters, journal/codex events, and player status files
+alike.
