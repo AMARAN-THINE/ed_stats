@@ -301,3 +301,14 @@ This covers the majority of the ship-ownership, engineering, and crafting-relate
 
 This confirms the complete commander-rank category list directly from code: Combat, Trade, Explore, Soldier (CQC
 ground combat... actually mercenary), Exobiologist, Empire, Federation, CQC — eight parallel rank tracks.
+
+## Fleet Carrier event schemas
+
+| Event(s) | Fields |
+|---|---|
+| `CarrierStats`, `CarrierDecommission`/`CarrierCancelDecommission`, `CarrierBankTransfer`, `CarrierCrewServices`, `CarrierFinance`, `CarrierShipPack`, `CarrierModulePack`, `CarrierDockingPermission` | `CarrierID`, `CarrierType`, `Deposit`/`Withdraw`, `PlayerBalance`/`CarrierBalance`/`AvailableBalance`, `ReservePercent`/`ReserveBalance`, `ScrapRefund`/`ScrapTime`, `Operation`, `PackTheme`/`PackTier`, `Cost`/`Refund`, `DockingAccess`, `AllowNotorious`, `Name`, `FuelLevel`, `JumpRangeCurr`/`JumpRangeMax`, `PendingDecommission`, `SpaceUsage` (`Crew`/`Cargo`/`CargoSpaceReserved`/`ShipPacks`/`ModulePacks`/`FreeSpace`/`TotalCapacity`), `Finance`, `Callsign`, `CrewRole`/`CrewName`, `Activated`, `Enabled` |
+| `CarrierDepositFuel` | `CarrierID`, `Amount`, `Total` |
+| `CarrierNameChange` | `CarrierID`, `Name`, `Callsign` |
+
+Combined with `CarrierJumpRequest`/`CarrierJumpCancelled` documented above, this covers the full Fleet Carrier
+journal event set, matching the 30-endpoint `elite/fleetcarrier/*` cluster in `server-endpoints.txt`.
