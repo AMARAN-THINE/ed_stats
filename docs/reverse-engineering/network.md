@@ -146,3 +146,13 @@ need to be decompiled individually to know which shape they are — the endpoint
 `FUN_14122e2c0` (`crafting/specials`, `crafting/engineer/pin`) shows two separate top-level vtable resets after the
 shared base constructor — the same multi-constructor pattern as colonisation and Powerplay, not a `switch`. This is
 now confirmed across colonisation, Powerplay, and crafting endpoint clusters.
+
+### Fourth pattern: single-object constructor serving multiple endpoints via runtime parameter
+
+`FUN_14477bd70` (2,330 addresses, backing `npccrew/assign`, `npccrew/fire`, `npccrew/market/hire`,
+`npccrew/market/list`) shows only **one** top-level vtable reset — neither the multi-constructor pattern
+(colonisation/Powerplay/crafting) nor a `switch` (vehicle dispatcher) nor the homogeneous-array pattern
+(survey/trade). This is a single object type whose specific action is presumably selected by a parameter passed in
+at the call site (not encoded in this constructor itself) — a fourth distinct shape for "one function, several
+endpoint strings" found this session, reinforcing that each shared handler needs individual verification rather
+than assuming a shape from endpoint count alone.
