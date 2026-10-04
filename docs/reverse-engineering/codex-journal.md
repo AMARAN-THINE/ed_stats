@@ -60,3 +60,21 @@ Confirms (from real code, not just strings) that the journal file format is: a `
 line per game event terminated `\r\n`, and a `Continued` event with an incrementing `Part` number when the writer
 rolls over to a new file — matching the multi-part `Journal.<timestamp>.01.log`, `.02.log` naming behavior players
 observe. File-write errors are retried up to 50 times before the writer stops attempting recovery.
+
+### Journal subsystem service registration (`FUN_14082b5f0`)
+
+This function is not per-line logging — it's a one-time startup registration of four named global service
+singletons, each via an identical lazy-init pattern (tear down existing instance if present, allocate, register with
+a shared component framework): **`JournalLogging`**, **`TransmitJournal`**, **`UploadJournal`**, and
+**`DisconnectionHandlerService`**. This confirms the journal pipeline is architected as four separate services —
+local file writing, transmission, upload, and disconnect handling are independent components, not one monolithic
+writer — matching the separate `TransmitJournal`/`UploadJournal`/`FlushUploadJournalActivity` strings noted in
+`README.md`.
+
+### Generic array/object line builder (`FUN_140834990`)
+
+A lower-level string-builder helper used while constructing a journal/event JSON line: appends a `"timestamp"` key
+and formatted ISO-8601 value, then iterates an array passed in `param_3` (count at `param_3+0x10`, element stride
+`0x38` bytes), formatting and appending each element via `FUN_1408339f0`, comma-joined. This is the generic
+array-serialization helper the event-builders (Fileheader/Continued and presumably the full per-event writers) call
+into — it is not event-specific and doesn't reveal which event uses it without further xref work.
