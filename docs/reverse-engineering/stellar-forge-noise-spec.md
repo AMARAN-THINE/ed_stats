@@ -79,8 +79,11 @@ of the output record.
 ## What's needed to go further
 1. Resolve step 7's exact formula (requires tracing the `IF` branch body for negative inputs).
 2. Confirm step 5's weight-vector construction (`TEMP9`'s role across all 4 corners, not just one).
-3. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — currently only 2 of what's likely 3 constants
-   were observed directly.
+3. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — only 2 constants (`3635633`, `15452791`) were
+   found directly; a search for a third distinct per-axis constant this session instead found `30798437` recurring
+   identically across multiple hash computations (so it's a general finalization-round constant, not axis-specific)
+   and `3184315597` used in an unrelated threshold comparison (`CB[1][12]`) with nothing to do with the hash. The
+   third axis constant, if one exists, was not found.
 4. Apply this same tracing to the large (~200K-instruction) permutations to find per-planet-class branches (basin,
    mountain, crater features documented in `stellar-forge-struct.md` presumably select different code paths or
    parameter sets not present in this smallest/simplest permutation).
