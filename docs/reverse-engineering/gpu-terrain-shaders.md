@@ -80,3 +80,14 @@ than many small dispatches.
 
 Full instruction-level disassembly (mapping opcode numbers to actual operations) was not attempted — it requires
 implementing/verifying the full DXBC Shader Model 5 opcode table, which this pass did not do.
+
+### Operand decoding: scoped out of this pass
+
+Full operand decoding (which register/constant-buffer slot each instruction reads/writes, swizzles, immediate
+values) was not implemented in this pass. The opcode-mnemonic disassembly above was built from an independently
+written decoder using only a minimal numeric opcode table; going further into operand decoding would mean
+implementing the DXBC operand token format (documented in Microsoft's public SM5 bytecode spec: per-operand
+component-count, operand-type, and index-dimension/type fields) from scratch. Rather than closely mirror a
+third-party open-source project's specific decoder implementation to shortcut this, it's left as an explicit,
+scoped next step: write an independent operand decoder from the public bit-format description. This is a concrete,
+bounded piece of work, not an open-ended one — but it wasn't done here.
