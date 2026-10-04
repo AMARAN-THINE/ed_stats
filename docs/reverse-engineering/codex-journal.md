@@ -532,3 +532,13 @@ Matches `elite/powerplay2/holoscreen/hack` in the endpoint catalogue (`server-en
 `FUN_1413842c0` (`survey/body/multiscan`), `FUN_141dcfc40` (`survey/beacon/scan`), `FUN_141383b00`
 (`survey/info`) all show zero field-name string literals, consistent with the hashed-field dispatch pattern already
 confirmed across status files and multiple other endpoint handlers.
+
+## Session lifecycle and legacy trade-data schemas
+
+| Event | Fields |
+|---|---|
+| `ClearSavedGame` | `Name`, `FID` |
+| `BuyTradeData` (legacy) | `System`, `Cost` |
+
+Other standalone identifiers found but without a full field list: `Shutdown`, `SystemsShutdown` (likely bare
+event-name-only entries, consistent with how `HeatWarning`/`HeatDamage` were documented earlier).
