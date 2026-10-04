@@ -282,3 +282,28 @@ exactly) a standard, publicly documented, open-source algorithm with freely avai
 substantially easier target to replicate exactly than an undocumented proprietary hash would have been. The other
 constants (`3635633`, `15452791`, `11710013`, `13953839`) were not matched against a named public algorithm in this
 pass and should be treated as this implementation's own mixing constants unless/until matched elsewhere.
+
+## Constant buffer sizes cross-validate the CPU-side struct
+
+The 5 declared constant buffers' sizes (in 16-byte vec4 units, from the `DCL_CONSTANT_BUFFER` operand's size field):
+
+| Register | Size (vec4s) | Size (bytes) | Likely role |
+|---|---|---|---|
+| `cb0` | 1 | 16 | small/fixed (possibly dispatch metadata) |
+| `cb1` | 81 | 1,296 | **large parameter block** |
+| `cb2` | 1 | 16 | small, read as the hash seed input (`CB[2][0]`) |
+| `cb3` | 22 | 352 | mid-size block |
+| `cb4` | 6 | 96 | small, read early (instruction 17, before the main hash loop) |
+
+`cb1` at 81 vec4s (1,296 bytes) is strikingly close in scale to the `StellarForgeInput*` planet-parameter struct
+documented in `stellar-forge-struct.md` (that struct's documented fields span roughly offset `0x0`–`0x220`+ in
+4-byte units, i.e. on the same order of magnitude once you account for vec4 packing/alignment). This is a real
+cross-validation between the independently-derived CPU-side struct-offset work and this session's GPU-side shader
+analysis — both point to a planet-parameter block of comparable size being fed to the generator, from two unrelated
+analysis angles. `cb2`'s 1-vec4 size matching its use as the hash seed is a second, smaller confirmation that these
+buffer roles are being read correctly.
+
+This is not proof the two are the *same* struct (no field-for-field mapping was established — that would require
+matching `cb1`'s byte offsets against the CPU struct's offsets, not attempted here), but it is solid structural
+corroboration that the GPU-side "parameters" buffer and the CPU-side `StellarForgeInput*` struct are the same kind
+of object, likely one feeding the other directly via a buffer upload.
