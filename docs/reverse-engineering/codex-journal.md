@@ -519,3 +519,10 @@ status-file write path rather than a per-file choice.
 
 Matches `elite/powerplay2/holoscreen/hack` in the endpoint catalogue (`server-endpoints.txt`), one of the Powerplay
 2.0 covert-action endpoints (alongside `ship/scan`, `megaship/scan`, `carrier/sabotage`).
+
+## `SearchAndRescue` and `Scanned` event schemas
+
+| Event | Fields |
+|---|---|
+| `SearchAndRescue` | `MarketID`, `Name`, `Count`, `Reward` |
+| `Scanned` | `ScanType` |
