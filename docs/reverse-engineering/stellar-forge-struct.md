@@ -132,3 +132,19 @@ alone.
 - **Not established from this binary**: the function(s) that build a per-planet noise graph from the input struct;
   the actual height/colour evaluation math; anything GPU-side (that lives in `.csa`/DXBC, a separate asset, not this
   executable).
+
+## `StellarForgeManager` top-level init (`FUN_1401f4700`, 11,163 addresses, 259 calls)
+
+Too large to decompile-and-read exhaustively, but its structure is clear from the named categories it loads in
+sequence (each via the same open/create-named-section pattern used throughout this subsystem): `Elite_Dangerous`
+(root namespace), `BodyInfoOverrideDatabase`, `OverrideDatabase`, `GalaxyRegions`, `PowerPlayRegions`,
+`StationColourGrading`.
+
+**Conclusion**: `StellarForgeManager`'s initialization is a **galaxy-wide static database loader** — region
+definitions, per-body overrides, Powerplay region data, and station colour-grading tables — not the per-planet
+procedural generator. This is consistent with `StellarForgeGalaxy`/`StellarForgeManager` being the "load the galaxy's
+static/authored data" layer, while the actual per-body noise evaluation (documented above as living partly in GPU
+compute shaders) is a separate, per-body code path invoked elsewhere, not inside this init function.
+
+This function was not decompiled line-by-line beyond identifying these category loads; a full read of its ~11k
+addresses was out of scope for this pass.
