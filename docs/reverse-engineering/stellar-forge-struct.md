@@ -233,3 +233,28 @@ documented earlier) — pure C++ static-initialization boilerplate, nothing furt
 now been checked. None contain the noise-evaluation/terrain algorithm itself — that remains confirmed as living in
 the GPU compute shaders (`gpu-terrain-shaders.md`). The CPU side of Stellar Forge, as implemented in this
 executable, is data management, streaming, and presentation around a GPU-computed core.
+
+## Location/hyperspace streaming subsystem (`DockedHyperspaceComponent`/`DockedHyperspaceLocation`)
+
+Two more large component-registration functions, `FUN_141bf4780` (6,235 addrs) and `FUN_1421b4220` (5,198 addrs),
+register the **location streaming and hyperspace transition** subsystem — this is what manages the current star
+system "instance" as a loaded/replicated level, separate from the three Stellar Forge tiers documented above:
+
+- **Hyperspace/jump transition**: `HyperspaceComponent`, `HyperspaceEffects`, `HyperspaceLocation`,
+  `HyperspaceLiveManager`, `HyperspaceInterdictionStatus`, `HyperspacePersonalisationComponent`,
+  `HumanoidHyperspaceComponent`, `PrepareForHyperspaceJump`, `SupercruiseTransitionHelper`,
+  `SuperCruiseEncounterStatus`, `DelayLocationOnStream`, `DelayLocationOnThisObject`.
+- **Location/level management**: `LocationManager`, `LocationAdmin`, `TransistionLocationAdmin` [sic],
+  `LocationLevelObject`, `LocationPhaseContainer`, `LocationObjectCreator`, `LocationInformationComponent`,
+  `LocationDeclareFORShifts` (frame-of-reference, ties to `FrameOfReferenceShiftHandler` found earlier),
+  `LocationResourceLoadingBudget`, `LocationFixedEventManager`, `LocationAsteroidManager`,
+  `LocationDecalsComponent`, `LocationIslandCustomiser`, `LocationExhibitionEnvironmentManager`,
+  `HiddenBodysiteManager`, `StarSystemDataCache`.
+- **Streaming/loading**: `LoadingScreenComponent`, `LoadingScreenObjects`, `HumanoidLoadingScreenObjects`,
+  `LevelBaseComponent`, `ReplicatedLevelContainer`, `ReinstanceManager`.
+- **NPCs and signal sources**: `NPCConversationManagerComponent`, `NPCMissionGiverManager`, `USSRegionManager`
+  (Unidentified Signal Source spawn regions), `USSTimeReporter`, `RandomEventOverrideParameterCache`.
+
+This is the fourth architectural tier found (alongside static DB / live sim / map UI documented earlier): the
+per-system **instance/level streaming layer** that loads and tears down the currently-occupied star system as the
+player jumps between systems, handling USS spawns, NPCs, and the hyperspace cinematic transition itself.
