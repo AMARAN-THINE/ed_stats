@@ -182,3 +182,19 @@ simple rock/rubble scattering.
 This is genuine evidence against assuming one simple formula covers all scatter content — different content types
 use measurably different algorithm shapes, which matters for anyone trying to reimplement this offline: a single
 "scatter formula" will not reproduce organism placement correctly even if it nails rock placement.
+
+## Operand decoder applied to `Aleoids` kernel: confirms richer per-species parameterization
+
+Running the same operand decoder against `cs_Scatter_Organics_Aleoids0_0_Win64_SM50` shows it reads **`CB[0][0]`
+through `CB[0][3]`** — four distinct constant-buffer elements — versus only `CB[0][0]` in the simple
+`Scatter_Everywhere` kernel. This is concrete evidence (not just inference from instruction count) that organism
+placement is driven by multiple per-genus parameters (plausibly density, minimum spacing, surface-suitability
+thresholds, or similar), while simple rock/rubble scattering needs only one. The kernel's 3 `LOOP`/`BREAKC` pairs
+(at distinct points, not one loop executed 3 times) also now have visible `BREAKC` conditions gating on computed
+`TEMP` registers — consistent with checking several candidate placement criteria in sequence, breaking early once
+one fails, though the exact per-register meaning isn't resolved without full data-flow tracing.
+
+**Net finding from the two-kernel comparison**: scatter/placement kernels share a common hash+sample+threshold
+skeleton but are meaningfully parameterized differently per content type (constant-buffer element count, presence/
+absence of loops) — an offline reimplementation would need per-kernel-type parameter extraction, not one shared
+formula.
