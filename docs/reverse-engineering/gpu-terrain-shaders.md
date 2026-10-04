@@ -91,3 +91,27 @@ component-count, operand-type, and index-dimension/type fields) from scratch. Ra
 third-party open-source project's specific decoder implementation to shortcut this, it's left as an explicit,
 scoped next step: write an independent operand decoder from the public bit-format description. This is a concrete,
 bounded piece of work, not an open-ended one — but it wasn't done here.
+
+## Operand decoder built; real constants extracted from the simple scatter kernel
+
+Implemented an independent operand decoder (`tools/decode_dxbc_operands.py`) from the DXBC operand-token bit-layout
+facts (component-count, type, and index-dimension/type fields in the first operand dword) — cross-validated against
+two independent sources before use (an open-source MIT-licensed disassembler and Microsoft's own historical SDK
+header enumerate the same operand-type numbers, e.g. `TEMP=0`, `INPUT=1`, `CONSTANT_BUFFER=8`), giving good
+confidence in the field positions even without implementing swizzle/write-mask extraction.
+
+Applied to the simple `cs_Scatter_Everywhere_AllSizes0_0_Win64_SM50` kernel, this resolves real operands:
+- Reads **`CB[0][0]`** repeatedly (constant buffer 0, element 0) — the single per-dispatch input value driving the
+  index/hash computation (likely the cell/thread index or a packed position).
+- Two texture reads: `RESOURCE[0]` via `LD` (a direct texel fetch, not sampled) and `RESOURCE[1]`/`RESOURCE[2]` via
+  `SAMPLE_L` (filtered/mip-level sampling) — i.e. one lookup texture is read raw, two are sampled with filtering.
+- **Real immediate constants recovered** (IEEE-754 decoded): `1.0`, `0.5`, `20.0` used in the `DIV`/`MUL`/`MAD`
+  sequence right after the UV/coordinate computation — consistent with remapping a normalized `[0,1]` coordinate
+  into a `[0,20]`-ish texture-space range (note: not yet confirmed which axis/purpose; this is the literal decoded
+  value, not an interpretation). Later: a `UMIN` against `(0, 20, 0, 20)` and an `ISHL` by `(0, 1, 0, 1)` in the
+  hash-finishing sequence — an integer mask-then-shift pattern typical of PRNG bit-mixing.
+
+This is the first time this investigation has recovered **actual numeric constants** from the generation algorithm,
+not just its shape. Caveats: swizzle/write-mask (which vector component(s) each operand addresses) and the extended
+operand modifier token (negate/absolute-value flags) are not decoded, so the exact per-component data flow isn't
+fully resolved — only operand identity and raw values.
