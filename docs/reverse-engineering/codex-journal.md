@@ -194,3 +194,13 @@ ship-location states, not the full `Docked` journal event's field list (which wa
 display code rather than the JSON event writer itself; the actual `Docked` event JSON writer was not isolated in
 this pass (the event's field list was already recovered from the CSV-header string directly, without needing to
 isolate its writer function).
+
+## Signal discovery events (`FSSSignalDiscovered`/`FSSDiscoveryScan`)
+
+Located `FUN_14113fe40` (656 addrs, `FSSSignalDiscovered` constructor — contains the literal field name
+`"SignalName"`, confirming at least that field against real code) and `FUN_14137dd80` (1,652 addrs, the larger
+handler referencing the full `FSSSignalDiscovered,SystemAddress,...` CSV header). The larger handler, like the
+`Market.json`/`Cargo.json` writers, contains no field-name string literals — another instance of the hashed-field
+write pattern documented above, further confirming that pattern's reach across both status files and journal event
+construction. `FUN_14113fb20` (793 addrs) and `FUN_141391d20` (306 addrs) are the equivalent pair for
+`FSSDiscoveryScan`, not individually decompiled in this pass.
