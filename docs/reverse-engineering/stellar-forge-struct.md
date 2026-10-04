@@ -148,3 +148,31 @@ compute shaders) is a separate, per-body code path invoked elsewhere, not inside
 
 This function was not decompiled line-by-line beyond identifying these category loads; a full read of its ~11k
 addresses was out of scope for this pass.
+
+## `GetStellarForgeBodyInfo` is a Lua scripting API entry, not a standalone function
+
+`FUN_1429d5990` (1,656 addresses), found via xref to the string `GetStellarForgeBodyInfo`, turns out to be a **Lua
+API registration table**, not the body-info query implementation itself. It registers 49 named functions as
+scriptable mission/scenario API calls, of which `GetStellarForgeBodyInfo` is one. This confirms mission/scenario Lua
+scripts can query Stellar Forge body data directly, alongside functions for:
+
+- **Objectives/missions**: `AddObjective`, `AddObjectiveGroup`, `UpdateObjective`, `UpdateObjectiveGroup`,
+  `GenerateIntroScriptedObjective`, `GenerateNextScriptedObjective`, `CommanderHasObjective`,
+  `AddCommanderToObjective`, `RemoveCommanderFromObjective`, `GetCommandersWithObjective`, `GetMissionInfo`.
+- **Commander/world state**: `GetCommanderState`, `RegisterCommanderStateChangeCallback`,
+  `ClearCommanderStateChangeCallback`, `SetStateVariable`, `ClearStateVariable`, `GetStateObject`,
+  `GetAvailableStateObjects`, `GetAvailableCommanderStates`.
+- **World/system queries**: `GetStarSystemInfo`, `GetSystemAddress`, `GetBodysiteID`, `GetBodysiteInfo`,
+  `GetStellarForgeBodyInfo`, `GetAllLevelObjects`, `GetPowers`, `GetPowerSystem`.
+- **Encounter/AI control**: `ScriptSpawnedAI`, `PauseGenerationOfNamedEncounter`,
+  `UnPauseGenerationOfNamedEncounter`, `ShouldDisableConflictZones`, `ClaimObject`, `ReleaseObject`.
+- **Scripting plumbing**: `RegisterEventHandler`, `UnregisterEventHandler`, `IsValidEventName`,
+  `RegisterPeriodicCallback`, `UnregisterPeriodicCallback`, `RequestAdvance`, `EnableAdvanceOnEvent`,
+  `GetScenarioCSMState`, `GetScenarioTimer`, `GetTimeStep`, `GetCurrentTimeMS`, `GetCurrentEpochTime`,
+  `GetRandomGenerator`, `TrackStat`, `AddTeamMarker`, `ClearTeamMarker`.
+
+This is the clearest evidence yet of the mission/scenario scripting layer's shape: a Lua environment with direct,
+named access to Stellar Forge body data, system/power state, and a full objective/event/callback framework — this is
+almost certainly the system behind Community Goals, scripted encounters, and mission scenarios. The actual
+*implementation* of `GetStellarForgeBodyInfo` (what it returns, and whether it touches generation or just reads
+cached/stored body data) was not traced past this registration table in this pass.
