@@ -258,3 +258,13 @@ system "instance" as a loaded/replicated level, separate from the three Stellar 
 This is the fourth architectural tier found (alongside static DB / live sim / map UI documented earlier): the
 per-system **instance/level streaming layer** that loads and tears down the currently-occupied star system as the
 player jumps between systems, handling USS spawns, NPCs, and the hyperspace cinematic transition itself.
+
+## Clarification: the StellarForge `KeyValue` serializer uses string keys, not hashes
+
+Decompiling `FUN_1439da630` (the field-setter called throughout the serializer documented above) confirms it builds
+literal string-keyed `"KeyValue"` pairs — the field name parameter (`param_2`) is copied directly as a string into
+the pair, not hashed. This is consistent with the field names appearing as real string literals in the decompiled
+code (as shown in the offset table above) and confirms that documentation is accurate. It also means this function
+is *not* related to the separate hash-dispatcher mechanism used by `Market.json`/`ScanOrganic`/etc.
+(`codex-journal.md`) — those remain a distinct, unlocated system; this was a negative result for that specific lead,
+not a resolution of it.
