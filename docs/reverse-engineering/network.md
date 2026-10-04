@@ -63,3 +63,8 @@ decompiled in the same pass; `FUN_1409adcf0`'s logic was already summarized in `
 This confirms the account-login and game-server-login requests are two distinct calls (matching the two hostnames
 documented above), not one combined flow, and that per-request fields are pulled from a generic key/value config
 store rather than being hard-coded per field.
+
+`FUN_1409b0d70` (`2.0/edserver/login`) is confirmed to be a request-object **constructor** (allocates the object,
+sets its vtable pointers, stores the path string) — the same shape as the journal/event upload constructors in
+`function-map.md`, not additional login logic. The actual field-population logic for this request wasn't reached in
+this pass (it happens after construction, in whatever code calls this constructor and then fills the object).
