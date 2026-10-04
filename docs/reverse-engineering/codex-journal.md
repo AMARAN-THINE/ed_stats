@@ -324,3 +324,17 @@ journal event set, matching the 30-endpoint `elite/fleetcarrier/*` cluster in `s
 
 `FCMaterials` matches the file of the same name listed in `README.md`'s file-name findings — this is the carrier
 commodity-market journal counterpart to the `FCMaterials.json` status file.
+
+## Crime and combat event schemas
+
+| Event | Fields |
+|---|---|
+| `Bounty` | `Rewards` (`Faction`/`Reward` per entry), `PilotName`, `Target`, `TotalReward`, `SharedWithOthers`, `Faction`, `VictimFaction`, `Reward` |
+| `FactionKillBond` | `Reward`, `AwardingFaction`, `VictimFaction` |
+| `Died` | `Killers` (`Name`/`Ship`/`Rank` per killer), `KillerName`/`KillerShip`/`KillerRank`, `Name`/`Ship`/`Rank`, `CrewLaunchFighter`, `Crew`/`ID`, `Telepresence` (for the single- vs. wing-kill variants) |
+| `ShipTargeted`/`TargetLocked` | `Ship`, `ScanStage`, `PilotName`/`PilotRank`, `SquadronID`, `ShieldHealth`/`HullHealth`, `Faction`, `LegalStatus`, `Bounty`, `Subsystem`/`SubsystemHealth`, `Power` |
+| `Interdiction`/`Interdicted`/`EscapeInterdiction` | `Submitted`, `Success`, `Interdictor`, `IsPlayer`, `CombatRank`, `Faction`, `Power`, `IsThargoid` |
+| `CommitCrime` | `CrimeType`, `Faction`, `Victim`, `Fine`, `Bounty` |
+| `PayFines`/`PayLegacyFines`/`PayBounties`/`RedeemVoucher` | `AllFines`, `Type`, `Amount`, `BrokerPercentage`, `Faction`/`Factions` |
+
+This covers the core combat/crime/bounty journal events.
