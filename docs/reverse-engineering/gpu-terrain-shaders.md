@@ -80,3 +80,51 @@ than many small dispatches.
 
 Full instruction-level disassembly (mapping opcode numbers to actual operations) was not attempted — it requires
 implementing/verifying the full DXBC Shader Model 5 opcode table, which this pass did not do.
+
+## Real instruction-level disassembly (opcode table recovered)
+
+The earlier instruction-count statistics used only the token *length* field (opcode-agnostic). This section adds
+real mnemonic-level disassembly, using a 286-entry DXBC opcode table (number → mnemonic) built from the public,
+standard DXBC/SM5 "tokenized program format" — reconstructed with reference to RenderDoc's open-source (MIT licensed)
+`dxbc_bytecode.h`/`dxbc_bytecode.cpp` (github.com/baldurk/renderdoc), which documents Microsoft's own bytecode format,
+not any Frontier-authored content. The table is `tools/dxbc_opcode_table.json`; the decoder is
+`tools/disasm_dxbc.py`. Operand decoding (register files, swizzles, immediates) was **not** implemented — only
+opcode mnemonic + raw instruction bytes. Sanity-checked: opcode 56 decodes as `MUL`, which was independently the most
+frequent opcode in the earlier blind length-based histogram — consistent with a math-heavy noise/scatter shader,
+giving confidence the table lines up correctly.
+
+### Example: smallest `Scatter.csa` kernel, fully disassembled (76 instructions, matches earlier count exactly)
+
+The first `cs_Scatter_Everywhere_AllSizes0_0_Win64_SM50` kernel (2,092 bytes) decodes cleanly start to end:
+- **Declarations** (instructions 0–10): one constant buffer, one sampler, 3 resources (textures), 2 UAVs (typed,
+  read-write output targets), input signature, temp registers, thread-group dimensions.
+- **Index/hash computation** (≈11–64): integer math dominated by `IADD`/`UDIV`/`UGE`/`XOR`/`USHR`/`AND`/`IMUL`/`IMAD`
+  — the classic shape of a deterministic hash function over an integer cell/grid index (consistent with computing a
+  per-point pseudo-random value from a world position or cell coordinate, not from the CPU-supplied
+  `StellarForgeInputSeed` directly — no constant-buffer read of a scalar seed value was seen in this kernel, only
+  resource/texture reads).
+- **Noise/height sampling** (≈18–28): `SAMPLE_L` (two calls) and `LD` reads against the declared resources —
+  texture-based noise or height-map lookups feeding into the placement decision.
+- **Threshold/branch** (≈29–71): `GE`/`LT` comparisons, `IF`/`ELSE`/`ENDIF` blocks, culminating in
+  `STORE_UAV_TYPED` (two calls) inside the final `IF` block — i.e. the point is written to the output UAV only if it
+  passes the computed threshold test, otherwise the `ELSE` branch stores a sentinel (`MOV` of `0xffffffff` seen at
+  instruction 69).
+- **Exit**: `RET` inside the early-out branch (instruction 15, for an out-of-range index) and after the main body
+  (instruction 75).
+
+**Interpretation** (moderate confidence — mnemonic-level only, operands not decoded): this kernel computes, per grid
+cell, an integer hash of the cell coordinates, samples 2–3 noise/height textures at that location, and writes a
+scatter-point record to a UAV only if a hash-derived and/or noise-derived value clears a threshold — the standard
+shape of GPU object-scattering (place grass/rocks/organisms only where a density function says to). This is
+consistent with `Scatter.csa`'s kernel names (`Scatter_Everywhere_*`, `Scatter_Organics_*`) documented earlier.
+
+### What this does and doesn't get us toward "predict without booting the game"
+- **Real progress**: this confirms the *shape* of the scatter algorithm (hash → noise-sample → threshold → write),
+  not just its name. That's new, verified information this session didn't have before.
+- **Still missing for an offline reimplementation**: the actual register-level operand values (which constant-buffer
+  field feeds which instruction, the exact hash constants/shifts, the exact noise function sampled). Getting those
+  requires implementing full operand decoding (register types, swizzle masks, immediate value extraction) on top of
+  this opcode table — a scoped, specific next step, not a vague "more work needed."
+- The terrain-height kernels (`TerrainComputeShaders*.csa`) are 1–3 orders of magnitude larger (up to ~200K
+  instructions) and were not disassembled in this pass; the method above should apply, but at that scale a bulk/
+  statistical disassembly pass (not manual reading) would be the practical next step.
