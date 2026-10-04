@@ -510,3 +510,12 @@ status-file write path rather than a per-file choice.
 |---|---|
 | `JetConeDamage`/`JetConeBoost` | `BoostValue`, `Module`, `Damage` |
 | `TechnologyBroker` | `BrokerType`, `MarketID`, `ItemsUnlocked`, `Ingredients` (`Commodities`/`Materials`), `Category`, `Name`, `Count` |
+
+## Powerplay 2.0 covert-action event schema
+
+| Event | Fields |
+|---|---|
+| `HoloscreenHacked` | `PowerBefore`, `PowerAfter` |
+
+Matches `elite/powerplay2/holoscreen/hack` in the endpoint catalogue (`server-endpoints.txt`), one of the Powerplay
+2.0 covert-action endpoints (alongside `ship/scan`, `megaship/scan`, `carrier/sabotage`).
