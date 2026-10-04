@@ -354,3 +354,16 @@ This covers the core combat/crime/bounty journal events.
 | `FuelScoop` | `Scooped`, `Total` |
 
 This closes out the trade/mining/ship-maintenance event group.
+
+## Wing and multicrew event schemas
+
+| Event | Fields |
+|---|---|
+| `WingJoin`/`WingAdd`/`WingLeave`/`WingInvite` | `Name`, `Others` |
+| `JoinACrew`/`QuitACrew`/`CrewMemberJoins`/`CrewMemberQuits`/`ChangeCrewRole`/`KickCrewMember`/`EndCrewSession` | `Captain`, `Crew`, `Role`, `CrewMemberRoleChange`, `OnCrime`, `Telepresence` |
+| `CrewHire`/`CrewFire`/`CrewAssign` | `Name`, `Cost`, `Role`, `CombatRank`, `Faction`, `CrewID` |
+| `NpcCrewPaidWage` | `NpcCrewId`, `NpcCrewName`, `Amount` |
+| `NpcCrewRank` | `NpcCrewId`, `NpcCrewName`, `RankCombat`, `EngineerID` |
+| `CargoDepot` | `MissionID`, `StartMarketID`/`EndMarketID`, `ItemsCollected`/`ItemsDelivered`/`TotalItemsToDeliver`, `Progress`, `UpdateType`, `CargoType`, `Count` |
+
+This closes out the wing/multicrew/NPC-crew/cargo-mission event group.
