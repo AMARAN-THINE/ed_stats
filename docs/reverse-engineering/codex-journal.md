@@ -208,3 +208,24 @@ construction. `FUN_14113fb20` (793 addrs) and `FUN_141391d20` (306 addrs) are th
 `FUN_14113fb20` (793 addrs) confirms `FSSDiscoveryScan`'s `BodyCount` and `NonBodyCount` fields against real code
 (matching the CSV header `FSSDiscoveryScan,Progress,BodyCount,NonBodyCount,SystemName,SystemAddress`).
 `FUN_141391d20` (306 addrs) shows no additional field-name literals — hashed-field pattern again.
+
+## `Scan` debug CSV header (`FUN_14260bab0`, 352 addresses)
+
+Same gated-debug-export pattern as `CodexEntry` and `FSDJump`. Field categories, summarized rather than reproduced
+verbatim:
+
+- **Body identity**: `BodyName`, `BodyID`, `Parents`, `ScanType`, `System`, `SystemAddress`, `Description`.
+- **Planet classification**: `PlanetClass`, `TidalLock`, `TerraformState`, `Landable`, `Materials`.
+- **Atmosphere**: `Atmosphere`, `AtmosphereType`, `AtmosphereComposition`, `Volcanism`.
+- **Star-specific**: `StarType`, `Subclass`, `Luminosity`, `StellarMass`, `AbsoluteMagnitude`.
+- **Physical properties**: `MassEM`, `Radius`, `SurfaceGravity`, `SurfaceTemperature`, `SurfacePressure`,
+  `Composition` (`Ice`/`Rock`/`Metal`), `Age_MY`.
+- **Orbital mechanics**: `DistanceFromArrivalLS`, `OrbitalPeriod`, `RotationPeriod`, `SemiMajorAxis`, `Eccentricity`,
+  `OrbitalInclination`, `Periapsis`, `AxialTilt`, `ScanBaryCentre`, `AscendingNode`, `MeanAnomaly`.
+- **Rings**: nested array (`Name`, `RingClass`, `MassMT`, `InnerRad`, `OuterRad`, reserve level), plus ring `Percent`
+  composition.
+- **Discovery/screenshot metadata**: `WasDiscovered`, `WasMapped`, `WasFootfalled`, `Screenshot`/`Filename`/
+  `Width`/`Height`/`Latitude`/`Longitude`/`Altitude`/`Heading` (the in-game screenshot-location metadata).
+
+This is the full body-scan schema confirmed directly from code, complementing the public journal manual with a
+single authoritative field list and its exact original field ordering.
