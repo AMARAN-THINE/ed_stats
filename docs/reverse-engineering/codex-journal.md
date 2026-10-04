@@ -422,3 +422,9 @@ covers `MissionAccepted`/`MissionCompleted` and the general `Missions` array: `N
 `Wing`, `NewDestinationStation`/`NewDestinationSystem`.
 
 This closes out the mission-lifecycle event group, completing the journal-event schema survey for this pass.
+
+## CommunityGoal status schema
+
+`CommunityGoal`/`CurrentGoals`: `CGID`, `Title`, `SystemName`, `MarketName`, `Expiry`, `IsComplete`, `CurrentTotal`,
+`PlayerContribution`, `NumContributors`, `TierReached`, `PlayerPercentileBand`, `Bonus`, `Name`, `TopTier`,
+`TopRankSize`, `PlayerInTopRank`.
