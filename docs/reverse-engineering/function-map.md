@@ -35,3 +35,23 @@ decompiled code; the binary has no symbols for these. Decompiled bodies are not 
 ## Tooling caveat
 `tools/Xrefs.py` stopped after the first non-ASCII string (`UnicodeEncodeError` in Jython 2); it processed the targets above
 before failing. If you extend it, wrap `str(d.getValue())` in `unicode(...)` handling.
+
+## Correction/confirmation: vehicle dispatcher verified by decompilation
+
+Following the same check applied to the colonisation dispatcher (which turned out to be a misattribution, see
+`network.md`), `FUN_1424e4fe0` was decompiled and checked. Unlike the colonisation case, **this one is confirmed**:
+it's a genuine runtime `switch` statement on an internal action code at `param_1+0x270`, cases `0`–`10`, with explicit
+per-case endpoint construction visible in the decompiled code:
+
+| Case | Endpoint |
+|---|---|
+| 1 | `2.0/elite/vehicle/launch` (and, further down the same case, `2.0/elite/multicrew/launchable/launch`) |
+| 2 | `2.0/elite/vehicle/dock` (and `2.0/elite/multicrew/launchable/dock`) |
+| 3 | `2.0/elite/fighter/switch` |
+| 4 | `2.0/elite/vehicle/switch` |
+| 6 | `2.0/elite/vessel/embark` |
+| 0, 5, 7, 8, 9, 10 | present as cases but their endpoint construction (if any) wasn't traced in this pass |
+
+This is a genuine single-function state machine handling vehicle/fighter/multicrew-launchable launch, dock, switch
+and embark actions by internal action-code, exactly as originally described — the earlier correction applied to the
+*colonisation* function only, not this one.
