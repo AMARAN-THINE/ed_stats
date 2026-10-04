@@ -445,3 +445,17 @@ purpose not fully confirmed) → two-field structured output record.**
 
 Every arrow in that chain is backed by extracted opcode/operand/constant evidence from the shipped binary, not
 inferred from names alone — this is the practical foundation an offline reimplementation would start from.
+
+## Correction: output is likely one double-precision value, not two fields
+
+Tracing `TEMP1`/`TEMP2` back: both derive from **the same source register** (`TEMP0`) via two separate `FTOD`
+(float→double) conversions, with `MOV TEMP1 = TEMP2` immediately before the two `STORE_STRUCTURED` calls. This
+revises the "two-field output record" claim above: it's more consistent with a **single double-precision value**
+(this being the `TerrainComputeShadersDP` = double-precision variant), whose low and high 32-bit halves get written
+to the two 16-byte-separated offsets, than with two semantically distinct fields.
+
+Caveat on confidence: the operand decoder built in this session does not decode write-masks/swizzles (scoped out
+earlier), and DXBC represents a double's two 32-bit halves as two components of **one** register, not two separate
+register numbers — so "TEMP1" and "TEMP2" as printed may actually be swizzled views into related storage rather than
+fully distinct registers. The directional conclusion (single double value, not two unrelated fields) is reasonably
+confident from the `FTOD`×2 + `MOV` pattern alone, but the exact bit-level packing is not fully resolved.
