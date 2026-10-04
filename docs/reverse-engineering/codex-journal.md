@@ -542,3 +542,7 @@ confirmed across status files and multiple other endpoint handlers.
 
 Other standalone identifiers found but without a full field list: `Shutdown`, `SystemsShutdown` (likely bare
 event-name-only entries, consistent with how `HeatWarning`/`HeatDamage` were documented earlier).
+
+## `UpgradeWeapon`/`UpgradeSuit` schema
+
+`UpgradeWeapon`/`UpgradeSuit`: `Name`, `Class`, `Cost`, `SuitID`, `SuitModuleID`, `Resources`.
