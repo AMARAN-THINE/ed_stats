@@ -312,3 +312,15 @@ ground combat... actually mercenary), Exobiologist, Empire, Federation, CQC — 
 
 Combined with `CarrierJumpRequest`/`CarrierJumpCancelled` documented above, this covers the full Fleet Carrier
 journal event set, matching the 30-endpoint `elite/fleetcarrier/*` cluster in `server-endpoints.txt`.
+
+## Odyssey on-foot event schemas
+
+| Event | Fields |
+|---|---|
+| `Backpack`/`BackpackChange` | `Name`, `OwnerID`, `MissionID`, `Count`, `Items`, `Components`, `Consumables`, `Data`, `Added`/`Removed`, `Type`, `TransferComplete` |
+| `UseConsumable` | `Name`, `Type` |
+| `CollectItems` | `Name`, `Type`, `OwnerID`, `Count`, `Stolen` |
+| `FCMaterials` | `MarketID`, `CarrierName`, `CarrierID`, `Items` (`id`/`Name`/`Price`/`Stock`/`Demand`) |
+
+`FCMaterials` matches the file of the same name listed in `README.md`'s file-name findings — this is the carrier
+commodity-market journal counterpart to the `FCMaterials.json` status file.
