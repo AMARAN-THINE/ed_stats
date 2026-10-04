@@ -120,3 +120,21 @@ specific event — `Fileheader`, `CodexEntry`, `ScanOrganic`, etc. — must even
 write), confirms the event classes dispatch into it through a virtual function table rather than a direct call,
 matching the `IJournalEntry`-style object pattern seen elsewhere in this codebase (e.g. the `JournalUploadRequest`
 constructor in `function-map.md` setting vtable pointers at construction).
+
+## System-wide pattern: hashed-field JSON (de)serialization
+
+Decompiling the status-file handlers for `Market.json` (`FUN_141fa6080`, 5,925 addrs), `Backpack.json`
+(`FUN_141abb8a0`, 2,657 addrs), `Cargo.json` (`FUN_141d619a0`, 4,359 addrs), and `ShipLocker.json`
+(`FUN_142e88380`, 2,738 addrs) all show the identical shape already seen in the `ScanOrganic` constructor
+(`function-map.md`) and the `elite/shipyard/modules/store` endpoint (`network.md`): **no field-name string literals
+in the function body** beyond boolean constants. This confirms a system-wide pattern rather than isolated cases: the
+game's JSON (de)serialization for status/inventory files is built on **compile-time-hashed field keys**, not runtime
+`strcmp` against literal names — a standard performance technique (avoids string comparison on every field of every
+parse) that was almost certainly applied uniformly across the whole status-file system, not per-file.
+
+Practical implication for this repo and similar tools: the field *names* documented elsewhere in this file (from the
+literal `CodexEntry` CSV header string, and from the public journal manual) are reliable — they're what actually
+appears in the JSON on disk — but recovering them *from the binary's own code* requires resolving the hash table
+these handlers dispatch through, which is a separate, not-yet-attempted piece of work (would need locating the
+hash function and the compile-time hash→field mapping, likely generated at build time and not stored as readable
+strings anywhere in the binary).
