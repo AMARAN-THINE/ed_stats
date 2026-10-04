@@ -94,3 +94,29 @@ Net result: confirmed that journal events have **two separate code paths** in th
 earlier: `Fileheader`/`Continued`/`Status.json` etc.) and a **separate key-based JSON parser** used for at least
 `SAAScanComplete`, which exists because the client re-reads certain event types rather than only producing them
 write-only.
+
+### Generic journal line-writer chain and the 500,000-line rollover threshold
+
+Tracing callers from the generic array/field serializer (`FUN_140834990`) upward resolves the full write path for an
+ordinary journal event line:
+
+```
+FUN_140813040 (230 addrs, reached only via indirect/vtable call — not found via direct xref)
+  -> FUN_140827200 (172 addrs)
+    -> FUN_140834c40 (493 addrs) -- the generic "write one line" function
+         - calls FUN_140834990 to append the "timestamp" field + array contents
+         - writes the line to the file handle at param_1+0x250
+         - increments a per-file line counter at param_1+0xe0
+         - if that counter exceeds 500000, calls FUN_140832640 (the "Continued" event
+           builder documented above), triggering file rollover
+```
+
+This gives a concrete, previously undocumented number: **the journal writer rolls over to a new file after 500,000
+lines**, not purely on a time or size basis. (Players observe journals rolling over roughly daily in normal play,
+which is consistent with 500K lines being a high ceiling rarely hit except in very long sessions or automation.)
+
+That `FUN_140813040` has no direct callers found by static xref, despite being clearly the generic entry point (every
+specific event — `Fileheader`, `CodexEntry`, `ScanOrganic`, etc. — must eventually call into this chain to actually
+write), confirms the event classes dispatch into it through a virtual function table rather than a direct call,
+matching the `IJournalEntry`-style object pattern seen elsewhere in this codebase (e.g. the `JournalUploadRequest`
+constructor in `function-map.md` setting vtable pointers at construction).
