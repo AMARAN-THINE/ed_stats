@@ -338,3 +338,19 @@ commodity-market journal counterpart to the `FCMaterials.json` status file.
 | `PayFines`/`PayLegacyFines`/`PayBounties`/`RedeemVoucher` | `AllFines`, `Type`, `Amount`, `BrokerPercentage`, `Faction`/`Factions` |
 
 This covers the core combat/crime/bounty journal events.
+
+## Trade, mining, and ship-service event schemas
+
+| Event | Fields |
+|---|---|
+| `MarketBuy`/`MarketSell` | `Type`, `Count`, `BuyPrice`/`TotalCost`, `SellPrice`/`TotalSale`, `AvgPricePaid`, `IllegalGoods`, `StolenGoods`, `BlackMarket` |
+| `Market` (status file) | `Items` (`Name`/`MeanPrice`/`Stock`/`Demand`/`Consumer`/`Producer`/`Contraband`/`Rare`/`Category`/`StockBracket`/`DemandBracket`), `StationName`, `StarSystem`, `MarketID`, `StationType`, `CarrierDockingAccess` |
+| `ProspectedAsteroid` | `Materials`, `MotherlodeMaterial`, `Content`, `Remaining` |
+| `MiningRefined` | `Type` |
+| `BuyAmmo`/`RestockVehicle` | `Loadout`, `Type`, `Cost`, `Count` |
+| `BuyDrones`/`SellDrones` | `Type`, `Count`, `BuyPrice`/`TotalCost`, `SellPrice`/`TotalSale` |
+| `Repair`/`RepairAll` | `Item`/`Items`, `Cost`, `Amount` |
+| `RefuelAll`/`RefuelPartial` | `Cost`, `Amount` |
+| `FuelScoop` | `Scooped`, `Total` |
+
+This closes out the trade/mining/ship-maintenance event group.
