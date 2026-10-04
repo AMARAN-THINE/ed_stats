@@ -87,3 +87,14 @@ shared dispatchers being the exception for closely related state-machine actions
 handler, the same pattern as the vehicle dispatcher in `function-map.md`. `FUN_141183210` (1,885 addresses) is a
 second, smaller colonisation dispatcher covering `claim/deny_starsystems`, `management/architect/colonised_systems`,
 and the `resources/marketlink/weighting` / `resources/optionsfulllist` read endpoints.
+
+### Correction: colonisation dispatcher is one constructor, not a runtime action switch
+
+Decompiling `FUN_1411824e0` shows only **3** vtable (`*param_1 = &PTR_FUN_...`) reassignments in its body — the
+signature of chained MSVC multiple-inheritance base-class constructors, not a function that builds 7 separate request
+objects or branches over 7 string literals. This means the earlier framing above ("one state-machine-style handler")
+is **not verified** by the decompiled code and is corrected here: this is most likely a single shared request/action
+*class* whose specific endpoint path is supplied by a parameter or table at the call site, not embedded as 7 literal
+strings inside this function. Which caller supplies which path for which of the 7 endpoints was not traced in this
+pass. The vehicle/vessel dispatcher (`FUN_1424e4fe0`) in `function-map.md` was not re-verified against this same
+check and should be treated with the same caution until confirmed.
