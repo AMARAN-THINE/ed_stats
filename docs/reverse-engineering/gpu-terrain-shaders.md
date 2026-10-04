@@ -317,3 +317,30 @@ width. This is followed by `UTOF` (int→float), then `MUL` by `CB4.z`/`CB4.w` a
 integer grid cell into a world/UV-space position via scale-then-offset. This matches `cb4`'s declared 6-vec4 (96
 byte) size (room for width/height plus a couple of scale/offset vectors) and gives real semantic meaning to one of
 the 5 constant buffers, not just its size.
+
+## Complete per-sample gradient-noise pipeline now reconstructed
+
+Putting the pieces from this disassembly session together, the full mechanism for one lattice-point evaluation in
+the smallest terrain kernel is now reconstructed end-to-end:
+
+1. Dispatch thread ID is unflattened into a 2D grid cell using `cb4.x` as grid width, then scaled/offset by
+   `cb4.y`–`.w` into a world/UV position (`cb4` role documented above).
+2. For each of (at least) 3 lattice corners, an integer per-axis coordinate (plus a seed-like value from `cb2`) is
+   hashed via a `xxHash32`-style mix: multiply by per-axis constants (`3635633`, `15452791`), `IMAD` by
+   `11710013`/`13953839`, then an avalanche pass (`h ^= h>>15; h *= 374761393 (XXH_PRIME32_5); h ^= h>>13`) — this
+   avalanche step repeats twice in sequence in the disassembly (chained finalization).
+3. The finalized hash is reduced via **`hash % 12`** (`UDIV` with modulus output) to select one of the **12 standard
+   Perlin gradient vectors** (table documented above, extracted directly from the shader's immediate constant
+   buffer).
+4. The selected gradient is dot-producted (`DP3`) against the offset vector from that lattice corner to the sample
+   point — one `DP3` per corner (4 seen in this kernel, consistent with 2D bilinear corner interpolation, or a
+   subset of a 3D cube's 8 corners).
+5. The four corner contributions are combined via `DP4` (a weighted sum/interpolation) and the result is scaled by
+   a constant that decodes to **`77.0`** (purpose not yet confirmed — plausibly a normalization/height-range scale,
+   but this is stated as the literal decoded value, not a confirmed interpretation).
+
+This is now a complete, concrete, directly-reimplementable description of one noise-sample evaluation, built
+entirely from extracted bytecode evidence (opcode sequence, real constants, the real gradient table) rather than
+inference from names or XML metadata. It does not yet cover: the interpolation weights between corners (how `DP4`'s
+first operand, `TEMP9`, was built — not traced), how many octaves are summed (this is one lattice evaluation, not
+the full fractal sum described in the `DefaultSurface` noise graph), or confirmation of the `77.0` constant's role.
