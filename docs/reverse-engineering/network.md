@@ -35,3 +35,16 @@ Noteworthy: `elite/colonisation/*` (system claim, construction effort, architect
 ## Other services mentioned
 Frontier store (password reset URL), EULA hosting URL for the Xbox build, an IRC host used for text chat, plus the
 dev/internal API hostnames listed in README.md.
+
+## Endpoint → function mapping
+
+`endpoint-functions.tsv` maps 351 of the 405 known `2.0/...` paths to the Ghidra function whose code references that
+path string (format: `endpoint<TAB>address<TAB>function-name<TAB>function-size-in-addresses`). Generated with
+`tools/EndpointMap.py`. The remaining ~54 paths are built from runtime-concatenated pieces (e.g. a shared
+prefix plus a per-item suffix) rather than a single literal, so they don't resolve to one containing function this way.
+
+Several endpoints share one function, which is a single dispatcher taking a route/verb argument rather than one function
+per REST path, e.g. `FUN_1424e4fe0` (7,504 addresses) backs `elite/vessel/embark`, `elite/vehicle/switch`,
+`elite/vehicle/launch`, `elite/vehicle/dock`, `elite/multicrew/launchable/launch`, `elite/multicrew/launchable/dock`,
+and `elite/fighter/switch` — i.e. the game's vehicle/vessel/fighter embark-dock-launch-switch flows are one state
+machine. Largest single-endpoint handler found: `elite/shipyard/modules/store` at `FUN_141f10980` (8,887 addresses).
