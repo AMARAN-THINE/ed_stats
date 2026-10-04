@@ -244,3 +244,22 @@ strings directly:
 Unlike the longer CSV headers (`CodexEntry`, `FSDJump`, `Scan`), the decompiler represented these shorter strings as
 inline immediate-value stores rather than a single recognizable string literal, so they were read directly from the
 raw string table instead of the decompiled C.
+
+## Remaining event schemas captured from the string table
+
+Field lists for several more events, taken directly from their literal CSV-header strings (format matches the
+pattern established above; functions not individually traced for all of these in this pass):
+
+| Event | Fields |
+|---|---|
+| `ScanOrganic` | `ScanType`, `Name`, `Genus`, `Species`, `Variant`, `WasLogged`, `SystemAddress`, `Body`, `SellOrganicData`, `MarketID`, `Value`, `Bonus`, `BioData` |
+| `SAAScanComplete` | `BodyName`, `BodyID`, `Discoverers`, `Mappers`, `ProbesUsed`, `EfficiencyTarget`, `SAASignalsFound`, `SystemAddress`, `Signals` (`Type`/`Count`), `Genuses` |
+| `FSSBodySignals` | `StarSystem`, `SystemAddress`, `BodyID`, `BodyName`, `Signals` (`Type`/`Count`) |
+| `NavBeaconScan` | `SystemAddress`, `NumBodies` |
+| `Docked`/`Undocked` | `StationName`, `StationType`, `CockpitBreach`, `StationFaction`/`FactionState`, `StarSystem`, `StationAllegiance`, `StationEconomy`/`StationEconomies` (`Name`/`Proportion`), `StationGovernment`, `StationState`, `Security`, docking-request outcomes (`DockingRequested`/`Granted`/`Denied`/`Cancelled`/`Timeout`), `LandingPad`, `Reason`, `DistFromStarLS`, `StationServices`, `SystemAddress`, `MarketID`, `Wanted`, `ActiveFine`, `Taxi`, `Multicrew`, `LandingPads` (`Small`/`Medium`/`Large` counts) |
+
+Together with the events documented above, this covers the large majority of the exploration/scanning-relevant
+journal events most useful to a tool like this repo (`ed_stats`): `CodexEntry`, `ScanOrganic`, `SAAScanComplete`,
+`FSSSignalDiscovered`, `FSSBodySignals`, `FSSDiscoveryScan`, `Scan`, `NavBeaconScan`, `ApproachBody`,
+`ApproachSettlement`, `Docked`/`Undocked`, `FSDJump`, `NavRoute` (fields: `Route`, `StarSystem`, `SystemAddress`,
+`StarPos`, `StarClass`), `CarrierJumpRequest`.
