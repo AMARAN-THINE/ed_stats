@@ -77,7 +77,11 @@ A single double-precision value (height), written as two 32-bit halves to a stru
 of the output record.
 
 ## What's needed to go further
-1. Resolve step 7's exact formula (requires tracing the `IF` branch body for negative inputs).
+1. Resolve step 7's exact formula. Partially traced: the `IF (result < 0)` branch does **not** simply clamp —
+   it re-enters another 4-iteration loop (same `UGE ... 4` / `BREAKC` shape as the main corner loop), i.e. a
+   secondary noise-like pass runs for negative results. Full resolution would need either a proper decompiler
+   (Ghidra-equivalent for DXBC, which doesn't exist off-the-shelf) or substantially more manual register tracing;
+   stopped here to avoid trading accuracy for speed on hand-traced registers at this depth.
 2. Confirm step 5's weight-vector construction (`TEMP9`'s role across all 4 corners, not just one).
 3. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — only 2 constants (`3635633`, `15452791`) were
    found directly; a search for a third distinct per-axis constant this session instead found `30798437` recurring
