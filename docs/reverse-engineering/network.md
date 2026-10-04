@@ -98,3 +98,13 @@ is **not verified** by the decompiled code and is corrected here: this is most l
 strings inside this function. Which caller supplies which path for which of the 7 endpoints was not traced in this
 pass. The vehicle/vessel dispatcher (`FUN_1424e4fe0`) in `function-map.md` was not re-verified against this same
 check and should be treated with the same caution until confirmed.
+
+## `elite/shipyard/modules/store` (largest single-endpoint handler)
+
+`FUN_141f10980` (8,887 addresses, 63 distinct called functions) was decompiled but yields no named-field string
+literals beyond boolean constants (`"true"`/`"false"`) — unlike the request builders documented elsewhere, this
+handler appears to use internal type-hash constants for field access (the same pattern seen in the `ScanOrganic`
+constructor in `codex-journal.md`) rather than string-keyed fields. Its size is consistent with it handling the full
+module-storage transaction (validation, inventory update, pricing) rather than just building a request. Not resolved
+further in this pass — a hash-table cross-reference against the type-hash constants used elsewhere would be needed to
+recover field semantics.

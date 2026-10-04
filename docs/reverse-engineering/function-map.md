@@ -50,7 +50,8 @@ per-case endpoint construction visible in the decompiled code:
 | 3 | `2.0/elite/fighter/switch` |
 | 4 | `2.0/elite/vehicle/switch` |
 | 6 | `2.0/elite/vessel/embark` |
-| 0, 5, 7, 8, 9, 10 | present as cases but their endpoint construction (if any) wasn't traced in this pass |
+| 0, 5, 8, 9, 10 | no endpoint-string construction found — likely local-only state transitions, not REST actions |
+| 7 | not checked in this pass |
 
 This is a genuine single-function state machine handling vehicle/fighter/multicrew-launchable launch, dock, switch
 and embark actions by internal action-code, exactly as originally described — the earlier correction applied to the
