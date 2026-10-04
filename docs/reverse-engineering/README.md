@@ -44,9 +44,15 @@ PortAudio for voice, OpenVR for VR.
 - **Store/login**: Epic Online Services token handling and Steam registry detection.
 - **UI**: ActionScript-style Flash UI symbols.
 
-## Command line / online services
-The binary parses a command line, supports selecting between live and test environments, and contains a journal upload
-path. Specific flags and hostnames are intentionally omitted from these notes.
+## Command line / server selection
+A usage string documents: `ServerToken (/Asp | /Boa | /Cobra | /Test | /PublicTest | /PrivateTest | /StagingTest |
+/UseInternalServer | /NoMachineID | ({string} {string}))*`. Other flags seen: `-forcepack`, `-infinity`, `-mobius`,
+`-mobiusHost`, `-noninteractive`, `-defaultContinueOnError`, `-fastNonStationMissions`, `-nonStationMissionsImportant`.
+
+Hard-coded hostnames found as plain strings: `api.live.local.elite.onsrvdev1.corp.frontier.co.uk`,
+`api.live.internalprod.elite.onsrvdev1.corp.frontier.co.uk`, `api.orerve.net`. A `2.0/elite/journal` path is used with
+`UploadJournal`, `TransmitJournal` and `FlushUploadJournalActivity`. The Epic login flow uses the header
+`X-Frontier-EpicAuth` and a console command `ConfigureEpic {RefreshToken} {SandboxID} {DeploymentID}`.
 
 ## Chat commands (in-game)
 `/local`, `/direct`, `/squadron`, `/multicrew`, `/voice`, `/reply`, `/names`, `/clear`, `/LinkInfo`, plus lookup helpers
