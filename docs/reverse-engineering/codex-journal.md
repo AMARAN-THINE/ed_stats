@@ -229,3 +229,18 @@ verbatim:
 
 This is the full body-scan schema confirmed directly from code, complementing the public journal manual with a
 single authoritative field list and its exact original field ordering.
+
+## Three more short event schemas, confirmed by function + field list
+
+Functions exist (found via string xref) backing these three events; field lists taken from the source CSV-header
+strings directly:
+
+| Event | Function | Fields |
+|---|---|---|
+| `ApproachBody`/`LeaveBody` | `FUN_142c9e5f0` (206 addrs) | `StarSystem`, `Body`, `SystemAddress`, `BodyID` |
+| `ApproachSettlement` | `FUN_141c4a1c0` (296 addrs) | `MarketID`, `Name`, `Latitude`, `Longitude`, `BodyName`, `SystemAddress`, `BodyID` |
+| `CarrierJumpRequest`/`CarrierJumpCancelled` | `FUN_142564e60` (318 addrs) | `CarrierID`, `SystemName`, `SystemAddress`, `BodyID`, `Body`, `DepartureTime`, `CarrierLocation`, `StarSystem`, `CarrierType` |
+
+Unlike the longer CSV headers (`CodexEntry`, `FSDJump`, `Scan`), the decompiler represented these shorter strings as
+inline immediate-value stores rather than a single recognizable string literal, so they were read directly from the
+raw string table instead of the decompiled C.
