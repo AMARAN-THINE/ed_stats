@@ -263,3 +263,15 @@ journal events most useful to a tool like this repo (`ed_stats`): `CodexEntry`, 
 `FSSSignalDiscovered`, `FSSBodySignals`, `FSSDiscoveryScan`, `Scan`, `NavBeaconScan`, `ApproachBody`,
 `ApproachSettlement`, `Docked`/`Undocked`, `FSDJump`, `NavRoute` (fields: `Route`, `StarSystem`, `SystemAddress`,
 `StarPos`, `StarClass`), `CarrierJumpRequest`.
+
+## Powerplay and communication event schemas
+
+| Event | Fields |
+|---|---|
+| `PowerplayVoucherRedeem`/`PowerplayCollect`/`PowerplayDeliver` | `Power`, `Type`, `Count` |
+| `SendText`/`ReceiveText` | `To`, `From`, `Message`, `Channel`, `Sent` |
+| `Friends` | `Status` |
+
+Additional Powerplay-related identifiers found as class/handler names (not full field lists):
+`PowerplayCarrierSbotageResponder` [sic — "Sbotage" is a typo in the binary, not mine], `PowerplayContact`,
+`PowerplayDefect`, `PowerplayDetails`.
