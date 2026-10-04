@@ -402,3 +402,23 @@ than journal event fields — `SquadronCreateJoin`, `SquadronPromotion`/`Squadro
 `SquadronBank`/`SquadronBankActivity` and `SquadronCarrier*` are the closest to journal-relevant events, but their
 field lists weren't isolated in this pass (unlike the CSV-header events documented elsewhere in this file, squadron
 events don't appear to share one consolidated header string).
+
+## Mission lifecycle event schemas
+
+| Event | Fields |
+|---|---|
+| `MissionRedirected` | `MissionID`, `NewDestinationStation`/`OldDestinationStation`, `NewDestinationSystem`/`OldDestinationSystem` |
+| `MissionAbandoned` | `Name`, `MissionID`, `Fine` |
+| `MissionFailed` | `Name`, `MissionID`, `Fine` |
+| `PVPKill` | `Victim`, `CombatRank` |
+| `AsteroidCracked` | `Body` |
+
+A separate, much larger consolidated mission-field string (already captured in `README.md`'s string-table findings)
+covers `MissionAccepted`/`MissionCompleted` and the general `Missions` array: `Name`, `System`, `Reward`, `Faction`,
+`PermitsAwarded`, `Commodity`/`Count`, `Donation`, `TargetType`/`Target`/`TargetFaction`, `Expiry`, `MissionID`,
+`DestinationSystem`/`DestinationStation`/`DestinationSettlement`, `PassengerCount`/`PassengerVIPs`/`PassengerWanted`/
+`PassengerType`, `CommodityReward`/`MaterialsReward`, `Influence`, `Reputation`/`ReputationTrend`, `KillCount`,
+`LocalisedName`, `CGID`, `Donated`, `FactionEffects` (`Trend`/`Effect`/`Effects`), `SystemAddress`, `Category`,
+`Wing`, `NewDestinationStation`/`NewDestinationSystem`.
+
+This closes out the mission-lifecycle event group, completing the journal-event schema survey for this pass.
