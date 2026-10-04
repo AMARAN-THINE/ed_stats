@@ -424,3 +424,24 @@ This rules out the earlier findings being a one-off artifact of a single compile
 hash algorithm, 4-corner/octave-loop structure, and constant-buffer roles are confirmed as the shared design across
 (at least) these two shader file families, strengthening confidence that this is "the" terrain algorithm rather than
 one variant among many unrelated ones.
+
+## Output record layout: two fields per UAV write
+
+The kernel's final two instructions write to the structured UAV (`T30`) at **byte offsets 0 and 16** within one
+output record (`STORE_STRUCTURED T30[0], recordIndex, offset=0, TEMP1` then `offset=16, TEMP2`) before `RET`. This
+confirms the per-sample output is a multi-field record (at least 2 values — plausibly height plus a second value
+such as a material/biome index or normal-related term), not a single scalar height. The two source registers
+(`TEMP1`, `TEMP2`) were not traced back to their full derivation in this pass.
+
+## Session summary: Stellar Forge GPU terrain algorithm, consolidated
+
+This investigation has now produced a cross-validated (2 independent shader files), bytecode-verified reconstruction
+of Stellar Forge's per-sample terrain evaluation:
+**grid-position setup (`cb4`) → per-corner integer hash (per-axis constants + seed from `cb2` + xxHash32-style
+avalanche using `XXH_PRIME32_5`) → `hash % 12` gradient selection from an extracted standard Perlin 12-vector table
+→ quartic Simplex falloff weighting → `DP3`/`DP4` combine across 4 corners → octave loop (data-driven count from
+`cb1[80]`, per-octave parameters from `cb1[]`) → polynomial remapping (constants `77.0`/`38.5`/`0.8`/`0.2`/etc.,
+purpose not fully confirmed) → two-field structured output record.**
+
+Every arrow in that chain is backed by extracted opcode/operand/constant evidence from the shipped binary, not
+inferred from names alone — this is the practical foundation an offline reimplementation would start from.
