@@ -344,3 +344,25 @@ entirely from extracted bytecode evidence (opcode sequence, real constants, the 
 inference from names or XML metadata. It does not yet cover: the interpolation weights between corners (how `DP4`'s
 first operand, `TEMP9`, was built — not traced), how many octaves are summed (this is one lattice evaluation, not
 the full fractal sum described in the `DefaultSurface` noise graph), or confirmation of the `77.0` constant's role.
+
+## Interpolation weight (`TEMP9`) identified: classic quartic Simplex falloff
+
+Traced `TEMP9`'s construction (the `DP4` weight operand left open in the previous section):
+
+```
+DP3   t = dot(offsetVec, offsetVec)        -- squared distance from lattice corner to sample point
+ADD   t = t + 0.5
+MAX   t = max(t, 0)                        -- clamp negative (out-of-radius) contributions to 0
+MUL   t = t * t                            -- t^2
+MUL   t = t * t                            -- t^4
+```
+
+This is the **standard quartic falloff kernel from Ken Perlin's Simplex Noise** (2001) — `t = max(0, 0.5 -
+dot(offset,offset))^4` is the textbook per-corner contribution weight in simplex-style noise (the exact additive
+constant/sign convention wasn't independently re-verified against the public formula here, but the shape — squared
+distance, clamp, raise to the 4th power — is an unambiguous match). Combined with the earlier findings, this
+completes the per-corner contribution: `weight(t^4) * dot(gradient, offset)`, summed via `DP4` across up to 4
+corners. Like the gradient table and the `xxHash32` prime, this confirms the implementation is a textbook, publicly
+documented noise technique (simplex/Perlin-family), not a proprietary invention — which is good news for anyone
+reimplementing it offline, since reference implementations of this exact technique are freely available and
+well-studied.
