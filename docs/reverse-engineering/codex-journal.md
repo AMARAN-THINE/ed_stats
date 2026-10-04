@@ -78,3 +78,19 @@ and formatted ISO-8601 value, then iterates an array passed in `param_3` (count 
 `0x38` bytes), formatting and appending each element via `FUN_1408339f0`, comma-joined. This is the generic
 array-serialization helper the event-builders (Fileheader/Continued and presumably the full per-event writers) call
 into — it is not event-specific and doesn't reveal which event uses it without further xref work.
+
+## CodexEntry / ScanOrganic / SAAScanComplete — decompiled construction & parsing
+
+Four functions located via string xref and decompiled:
+
+| Function | Role |
+|---|---|
+| `FUN_14112de80` (`0x14112de80`) | Writes the literal `CodexEntry,EntryID,Name,SubCategory,...,BodyID` string (the CSV header documented above) into a buffer, gated behind a condition check — consistent with a debug/CSV export path for codex entries, separate from the JSON journal line. |
+| `FUN_14113f5a0` (`0x14113f5a0`) | References the `CodexEntry` string; not fully traced in this pass. |
+| `FUN_1411403a0` (`0x1411403a0`) | **Parser/deserializer** for `SAAScanComplete` — string-compares incoming JSON keys against literal names `BodyName`, `ProbesUsed`, `EfficiencyTarget` to populate a result struct. This confirms these three field names against real code (not just the schema string) and shows the game reads these events back in (e.g. for session resume), not just writes them. |
+| `FUN_141356520` (`0x141356520`) | Constructor for a `ScanOrganic`-related object; initializes ~12 typed fields via a shared registration call (`FUN_140869ec0`) keyed by internal type-hash constants rather than name strings in the portion decompiled — field names weren't recoverable from this function alone. |
+
+Net result: confirmed that journal events have **two separate code paths** in this binary — JSON line writers (documented
+earlier: `Fileheader`/`Continued`/`Status.json` etc.) and a **separate key-based JSON parser** used for at least
+`SAAScanComplete`, which exists because the client re-reads certain event types rather than only producing them
+write-only.
