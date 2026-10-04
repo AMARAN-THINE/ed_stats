@@ -394,3 +394,15 @@ this is now tied to a concrete constant-buffer offset in real compiled code, not
 
 This resolves the earlier open question about whether this specific kernel implements multi-octave fractal noise:
 **it does**, via this data-driven loop, separate from the 4-corner interpolation loop.
+
+## Post-noise remapping constants extracted (`77.0` context resolved further, not fully)
+
+Immediately after the `DP4` combine, the raw noise value goes through a remapping chain with these real constants
+(IEEE-754 decoded): `MUL *77.0`, then `MAD *38.5 + ...`, then two more `MAD`s with `0.8`/`0.2` and `1/60`
+(`0.01667`)/`1/120` (`0.00833`), followed by an `LT 0` test and an `IF` branch (piecewise behavior for negative
+values). `38.5` is exactly `77.0/2`, and `0.8 + 0.2 = 1.0` (consistent with a weighted blend of two terms). This
+reads as a polynomial remapping/shaping function applied to the raw noise output before it becomes a height or
+density value, with different behavior for negative vs. non-negative input — but the precise formula and its
+purpose (height curve shaping? erosion-style remapping?) is **not confirmed**, only the literal constants and
+instruction shape are. Flagging this honestly rather than guessing a specific named technique, unlike the gradient
+table and hash constant above which matched known public references exactly.
