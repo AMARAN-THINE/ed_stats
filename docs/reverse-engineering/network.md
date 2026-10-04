@@ -156,3 +156,6 @@ now confirmed across colonisation, Powerplay, and crafting endpoint clusters.
 at the call site (not encoded in this constructor itself) — a fourth distinct shape for "one function, several
 endpoint strings" found this session, reinforcing that each shared handler needs individual verification rather
 than assuming a shape from endpoint count alone.
+
+`FUN_141e84800` (6,221 addresses, `initiative/optin`/`initiative/redeem`) also shows a single top-level vtable
+reset — same single-constructor-with-parameter-selected-action shape as the npccrew handler above.
