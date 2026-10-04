@@ -128,3 +128,13 @@ consistent with `Scatter.csa`'s kernel names (`Scatter_Everywhere_*`, `Scatter_O
 - The terrain-height kernels (`TerrainComputeShaders*.csa`) are 1–3 orders of magnitude larger (up to ~200K
   instructions) and were not disassembled in this pass; the method above should apply, but at that scale a bulk/
   statistical disassembly pass (not manual reading) would be the practical next step.
+### Operand decoding: scoped out of this pass
+
+Full operand decoding (which register/constant-buffer slot each instruction reads/writes, swizzles, immediate
+values) was not implemented in this pass. The opcode-mnemonic disassembly above was built from an independently
+written decoder using only a minimal numeric opcode table; going further into operand decoding would mean
+implementing the DXBC operand token format (documented in Microsoft's public SM5 bytecode spec: per-operand
+component-count, operand-type, and index-dimension/type fields) from scratch. Rather than closely mirror a
+third-party open-source project's specific decoder implementation to shortcut this, it's left as an explicit,
+scoped next step: write an independent operand decoder from the public bit-format description. This is a concrete,
+bounded piece of work, not an open-ended one — but it wasn't done here.
