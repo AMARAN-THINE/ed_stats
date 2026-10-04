@@ -307,3 +307,13 @@ This is not proof the two are the *same* struct (no field-for-field mapping was 
 matching `cb1`'s byte offsets against the CPU struct's offsets, not attempted here), but it is solid structural
 corroboration that the GPU-side "parameters" buffer and the CPU-side `StellarForgeInput*` struct are the same kind
 of object, likely one feeding the other directly via a buffer upload.
+
+## `cb4` identified: dispatch-grid-to-world-position parameters
+
+Decoded the instructions immediately following the thread-ID computation (before the hash sequence):
+`TEMP0 = (dispatchThreadID + CB[0][0]) / CB4.x`, with the matching remainder via `IMAD TEMP0 = TEMP0*CB4.x + TEMP0`
+— the classic pattern for **unflattening a 1D dispatch index into 2D grid coordinates** using `CB4.x` as the grid
+width. This is followed by `UTOF` (int→float), then `MUL` by `CB4.z`/`CB4.w` and `ADD` of `CB4.y` — converting the
+integer grid cell into a world/UV-space position via scale-then-offset. This matches `cb4`'s declared 6-vec4 (96
+byte) size (room for width/height plus a couple of scale/offset vectors) and gives real semantic meaning to one of
+the 5 constant buffers, not just its size.
