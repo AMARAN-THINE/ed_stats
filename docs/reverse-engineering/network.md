@@ -129,3 +129,14 @@ confirmed for both colonisation "dispatcher" functions. This is now observed acr
 endpoint clusters, suggesting the "one function, many endpoint strings" shape generally means multi-constructor code,
 not a runtime dispatcher, with the vehicle dispatcher (`FUN_1424e4fe0`, a genuine `switch`) being the exception
 rather than the rule.
+
+### Third pattern found: single object with a homogeneous sub-element array
+
+`FUN_141350ae0` (2,014 addresses, backing 5 `elite/survey/trade/*` endpoints) is neither a `switch` dispatcher nor a
+multi-constructor function. It sets its top-level vtable **once**, then writes the **same** vtable pointer
+(`PTR_FUN_1451a1560`) six times at a regular stride (0x1f dwords apart: offsets 0x41, 0x60, 0x7f, 0x9e, 0xbd, 0xdc) —
+i.e. one object containing a fixed-size array of 6 identical-type sub-elements, most likely one slot per
+buy/sell/multisell/list-buy/list-sell survey-trade action. This is a third distinct code shape for "one function,
+several endpoint strings," alongside the verified `switch` (vehicle dispatcher) and the multi-constructor pattern
+(colonisation/Powerplay). The lesson generalized across all three checks: this binary's "shared handler" functions
+need to be decompiled individually to know which shape they are — the endpoint-count alone doesn't predict it.
