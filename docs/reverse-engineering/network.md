@@ -68,3 +68,81 @@ store rather than being hard-coded per field.
 sets its vtable pointers, stores the path string) — the same shape as the journal/event upload constructors in
 `function-map.md`, not additional login logic. The actual field-population logic for this request wasn't reached in
 this pass (it happens after construction, in whatever code calls this constructor and then fills the object).
+
+## Verification: per-endpoint vs. shared dispatcher functions
+
+Across all 351 resolved endpoint→function mappings in `endpoint-functions.tsv`, there are **320 distinct constructor
+functions**. **265 of those are used by exactly one endpoint** (a dedicated request class per REST path, as described
+above), while the remaining ~31 functions are shared dispatchers serving multiple related endpoints (the
+vehicle/vessel/fighter embark-dock-launch-switch example in `function-map.md` is the largest such case). This
+confirms quantitatively — not just from one example — that the dominant pattern is one small class per endpoint, with
+shared dispatchers being the exception for closely related state-machine actions.
+
+## Colonisation dispatcher cluster
+
+`FUN_1411824e0` (3,361 addresses) is a second major shared dispatcher, backing 7 colonisation endpoints:
+`claim/cancel`, `claim/candidate_filters`, `claim/claimsystem`, `constructioneffort/contribute`,
+`constructioneffort/planetary/create`, `constructioneffort/space/create`, `launchcolonisationbeacon`, and
+`rename/renamemarket` — i.e. the colonisation claim/construction/beacon/rename actions are one state-machine-style
+handler, the same pattern as the vehicle dispatcher in `function-map.md`. `FUN_141183210` (1,885 addresses) is a
+second, smaller colonisation dispatcher covering `claim/deny_starsystems`, `management/architect/colonised_systems`,
+and the `resources/marketlink/weighting` / `resources/optionsfulllist` read endpoints.
+
+### Correction: colonisation dispatcher is one constructor, not a runtime action switch
+
+Decompiling `FUN_1411824e0` shows only **3** vtable (`*param_1 = &PTR_FUN_...`) reassignments in its body — the
+signature of chained MSVC multiple-inheritance base-class constructors, not a function that builds 7 separate request
+objects or branches over 7 string literals. This means the earlier framing above ("one state-machine-style handler")
+is **not verified** by the decompiled code and is corrected here: this is most likely a single shared request/action
+*class* whose specific endpoint path is supplied by a parameter or table at the call site, not embedded as 7 literal
+strings inside this function. Which caller supplies which path for which of the 7 endpoints was not traced in this
+pass. The vehicle/vessel dispatcher (`FUN_1424e4fe0`) in `function-map.md` was not re-verified against this same
+check and should be treated with the same caution until confirmed.
+
+## `elite/shipyard/modules/store` (largest single-endpoint handler)
+
+`FUN_141f10980` (8,887 addresses, 63 distinct called functions) was decompiled but yields no named-field string
+literals beyond boolean constants (`"true"`/`"false"`) — unlike the request builders documented elsewhere, this
+handler appears to use internal type-hash constants for field access (the same pattern seen in the `ScanOrganic`
+constructor in `codex-journal.md`) rather than string-keyed fields. Its size is consistent with it handling the full
+module-storage transaction (validation, inventory update, pricing) rather than just building a request. Not resolved
+further in this pass — a hash-table cross-reference against the type-hash constants used elsewhere would be needed to
+recover field semantics.
+
+### Second colonisation function confirms the multi-constructor pattern, not dispatch
+
+`FUN_141183210` (the second colonisation "dispatcher" noted above, covering `claim/deny_starsystems`,
+`management/architect/colonised_systems`, `resources/marketlink/weighting`, `resources/optionsfulllist`) was
+decompiled and checked the same way. It resets `*param_1` to a **new top-level vtable twice** (two separate
+`*param_1 = &PTR_FUN_...` assignments, each starting a fresh object layout, not a chained-constructor sequence) —
+confirming this is a function that builds multiple distinct request-object types one after another, the same
+non-dispatcher pattern already found for `FUN_1411824e0`. This generalizes the earlier correction: both large
+"shared" colonisation functions are multi-object-construction code, not runtime action switches, unlike the vehicle
+dispatcher (`FUN_1424e4fe0`), which is a genuine verified `switch`.
+
+### Powerplay function confirms multi-constructor pattern generalizes further
+
+`FUN_1425355b0` (3,611 addresses, backing `powerplay2/microresource/deliver`, `powerplay2/microresource/collect`,
+`powerplay2/commander/package/claim`) was checked the same way: no `switch` statement found, and two separate
+top-level vtable resets (not a chained-constructor sequence) — the same multi-object-construction pattern already
+confirmed for both colonisation "dispatcher" functions. This is now observed across colonisation and Powerplay
+endpoint clusters, suggesting the "one function, many endpoint strings" shape generally means multi-constructor code,
+not a runtime dispatcher, with the vehicle dispatcher (`FUN_1424e4fe0`, a genuine `switch`) being the exception
+rather than the rule.
+
+### Third pattern found: single object with a homogeneous sub-element array
+
+`FUN_141350ae0` (2,014 addresses, backing 5 `elite/survey/trade/*` endpoints) is neither a `switch` dispatcher nor a
+multi-constructor function. It sets its top-level vtable **once**, then writes the **same** vtable pointer
+(`PTR_FUN_1451a1560`) six times at a regular stride (0x1f dwords apart: offsets 0x41, 0x60, 0x7f, 0x9e, 0xbd, 0xdc) —
+i.e. one object containing a fixed-size array of 6 identical-type sub-elements, most likely one slot per
+buy/sell/multisell/list-buy/list-sell survey-trade action. This is a third distinct code shape for "one function,
+several endpoint strings," alongside the verified `switch` (vehicle dispatcher) and the multi-constructor pattern
+(colonisation/Powerplay). The lesson generalized across all three checks: this binary's "shared handler" functions
+need to be decompiled individually to know which shape they are — the endpoint-count alone doesn't predict it.
+
+### Crafting endpoint function also confirmed multi-constructor
+
+`FUN_14122e2c0` (`crafting/specials`, `crafting/engineer/pin`) shows two separate top-level vtable resets after the
+shared base constructor — the same multi-constructor pattern as colonisation and Powerplay, not a `switch`. This is
+now confirmed across colonisation, Powerplay, and crafting endpoint clusters.

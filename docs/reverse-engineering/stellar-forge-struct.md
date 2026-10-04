@@ -148,3 +148,136 @@ compute shaders) is a separate, per-body code path invoked elsewhere, not inside
 
 This function was not decompiled line-by-line beyond identifying these category loads; a full read of its ~11k
 addresses was out of scope for this pass.
+
+## `GetStellarForgeBodyInfo` is a Lua scripting API entry, not a standalone function
+
+`FUN_1429d5990` (1,656 addresses), found via xref to the string `GetStellarForgeBodyInfo`, turns out to be a **Lua
+API registration table**, not the body-info query implementation itself. It registers 49 named functions as
+scriptable mission/scenario API calls, of which `GetStellarForgeBodyInfo` is one. This confirms mission/scenario Lua
+scripts can query Stellar Forge body data directly, alongside functions for:
+
+- **Objectives/missions**: `AddObjective`, `AddObjectiveGroup`, `UpdateObjective`, `UpdateObjectiveGroup`,
+  `GenerateIntroScriptedObjective`, `GenerateNextScriptedObjective`, `CommanderHasObjective`,
+  `AddCommanderToObjective`, `RemoveCommanderFromObjective`, `GetCommandersWithObjective`, `GetMissionInfo`.
+- **Commander/world state**: `GetCommanderState`, `RegisterCommanderStateChangeCallback`,
+  `ClearCommanderStateChangeCallback`, `SetStateVariable`, `ClearStateVariable`, `GetStateObject`,
+  `GetAvailableStateObjects`, `GetAvailableCommanderStates`.
+- **World/system queries**: `GetStarSystemInfo`, `GetSystemAddress`, `GetBodysiteID`, `GetBodysiteInfo`,
+  `GetStellarForgeBodyInfo`, `GetAllLevelObjects`, `GetPowers`, `GetPowerSystem`.
+- **Encounter/AI control**: `ScriptSpawnedAI`, `PauseGenerationOfNamedEncounter`,
+  `UnPauseGenerationOfNamedEncounter`, `ShouldDisableConflictZones`, `ClaimObject`, `ReleaseObject`.
+- **Scripting plumbing**: `RegisterEventHandler`, `UnregisterEventHandler`, `IsValidEventName`,
+  `RegisterPeriodicCallback`, `UnregisterPeriodicCallback`, `RequestAdvance`, `EnableAdvanceOnEvent`,
+  `GetScenarioCSMState`, `GetScenarioTimer`, `GetTimeStep`, `GetCurrentTimeMS`, `GetCurrentEpochTime`,
+  `GetRandomGenerator`, `TrackStat`, `AddTeamMarker`, `ClearTeamMarker`.
+
+This is the clearest evidence yet of the mission/scenario scripting layer's shape: a Lua environment with direct,
+named access to Stellar Forge body data, system/power state, and a full objective/event/callback framework — this is
+almost certainly the system behind Community Goals, scripted encounters, and mission scenarios. The actual
+*implementation* of `GetStellarForgeBodyInfo` (what it returns, and whether it touches generation or just reads
+cached/stored body data) was not traced past this registration table in this pass.
+
+## Two more large `StellarForge*`-adjacent functions, decompiled
+
+### `StellarForgeAuxiliaryGenerationSource` (`FUN_1439c5250`, 7,124 addresses)
+
+A second galaxy-wide static database loader (same pattern as `StellarForgeManager`'s init), registering:
+`ColourTableHelper`, `CompoundComponent`, `ElementComponent`, `ReactionComponent` (chemistry/materials data — likely
+what backs mining refinement and material synthesis), `EmissionColours`/`NebulaTable` (nebula rendering data),
+`ServerSystemMetaDataOverride`, and `PortDatabase`/`StationDatabase`/`StationNameDatabase` (station generation data).
+"Auxiliary generation source" is an accurate name: this is supplementary static data the generator draws on, separate
+from the per-planet `StellarForgeInput*` struct.
+
+### `StellarForgeSkyboxMap` (`FUN_143c0fa80`, 7,910 addresses)
+
+Despite the name, this is **not** planet skybox rendering — it's a component-class registration function for the
+**Galaxy Map / System Map** UI and rendering subsystem: `GalaxyMap`, `GalaxyMapCamera`, `GalaxyMapInput`,
+`GalaxyMapLabelManager`, `GalaxyMapNameSearch`, `GalaxyMapNavigation`, `GalaxyMapTradeRoutes`,
+`GalaxyMapFleetCarriers`, `GalaxyMapVisualisation`, `GalaxyMapUIComponent`, `GalaxyRenderManager` (+ "ForCapture"
+screenshot variants), `SystemMap`, `SystemMapCamera`, `SystemMapOrrery`/`SystemMapOrreryCamera`,
+`SystemMapObjectStore`, `SystemMapUIComponent`, `SystemRenderManager`, `SkyboxStarRenderManager`,
+`MilkyWayBBoardManager` (the background starfield billboard renderer), plus settlement/body-placement helpers
+(`AncientSettlementProcessor`, `ManualSettlementProcessor`, `SettlementPositionUpdater`, `PlanetMapBodyManager`,
+`PlanetMapLightComponent`, `SystemContentProcessor`, `BlackHoleInfoHolder`, `VolcanicDatabase`,
+`PlanetResourceResolverInspector`, `TradeRoutesCache`). The "skybox" in the name likely refers to the Milky Way
+backdrop rendered behind the galaxy map, which this function also registers (`MilkyWayBBoardManager`,
+`SkyboxStarRenderManager`), rather than per-planet sky rendering.
+
+Both functions are, like `StellarForgeManager`'s init, component/database **registration** code, not generation
+algorithms — consistent with every large `StellarForge*`-named function found so far being part of the setup/data
+layer rather than the noise evaluation itself (which, per the earlier finding, is GPU-side).
+
+## `StellarForgeLiveManager` and the three-tier architecture (complete picture)
+
+`FUN_143c957c0` (`StellarForgeLiveManager`, 2,831 addresses) registers: `FrameOfReferenceShiftHandler` (a
+floating-origin technique — re-centering coordinates around the player to avoid float precision loss far from galaxy
+origin), `LevelRingCellManager`/`LevelRingCellShape` (ring-based spatial cell partitioning, almost certainly the
+streaming/LOD mechanism for loading nearby systems as the player moves), `SpaceLocationComponent`/
+`StaticLocationComponent`, `StarVisualAspect`, and `TextureSliceManager`.
+
+**This completes the picture of what the large `StellarForge*` functions actually are.** None of the six largest
+`StellarForge`-prefixed functions found in this binary are the generation algorithm; they're three distinct
+registration/setup tiers:
+1. **Static galaxy database** — `StellarForgeManager` (regions, Powerplay, overrides) and
+   `StellarForgeAuxiliaryGenerationSource` (chemistry, nebula colours, station databases).
+2. **Runtime/live simulation** — `StellarForgeLiveManager` (frame-of-reference shifting, spatial streaming cells,
+   star visuals) — this is the layer active while flying.
+3. **Map/UI presentation** — `StellarForgeSkyboxMap` (Galaxy Map, System Map, Orrery, and their cameras/renderers).
+
+The remaining six `StellarForge*`-prefixed functions checked (`StellarForgeGeneratorComponents`, `StellarForgeLive`,
+`StellarForgeLiveComponent`, `StellarForgeSimulation`, `StellarForgeSimulationClient`, `StellarForgeUtils`) are all
+the identical minimal RTTI/type-registration stub (112 addresses each, same shape as `StellarForgeGalaxy`
+documented earlier) — pure C++ static-initialization boilerplate, nothing further to extract from them.
+
+**Where this leaves the investigation**: every `StellarForge`-named function reachable by name from this binary has
+now been checked. None contain the noise-evaluation/terrain algorithm itself — that remains confirmed as living in
+the GPU compute shaders (`gpu-terrain-shaders.md`). The CPU side of Stellar Forge, as implemented in this
+executable, is data management, streaming, and presentation around a GPU-computed core.
+
+## Location/hyperspace streaming subsystem (`DockedHyperspaceComponent`/`DockedHyperspaceLocation`)
+
+Two more large component-registration functions, `FUN_141bf4780` (6,235 addrs) and `FUN_1421b4220` (5,198 addrs),
+register the **location streaming and hyperspace transition** subsystem — this is what manages the current star
+system "instance" as a loaded/replicated level, separate from the three Stellar Forge tiers documented above:
+
+- **Hyperspace/jump transition**: `HyperspaceComponent`, `HyperspaceEffects`, `HyperspaceLocation`,
+  `HyperspaceLiveManager`, `HyperspaceInterdictionStatus`, `HyperspacePersonalisationComponent`,
+  `HumanoidHyperspaceComponent`, `PrepareForHyperspaceJump`, `SupercruiseTransitionHelper`,
+  `SuperCruiseEncounterStatus`, `DelayLocationOnStream`, `DelayLocationOnThisObject`.
+- **Location/level management**: `LocationManager`, `LocationAdmin`, `TransistionLocationAdmin` [sic],
+  `LocationLevelObject`, `LocationPhaseContainer`, `LocationObjectCreator`, `LocationInformationComponent`,
+  `LocationDeclareFORShifts` (frame-of-reference, ties to `FrameOfReferenceShiftHandler` found earlier),
+  `LocationResourceLoadingBudget`, `LocationFixedEventManager`, `LocationAsteroidManager`,
+  `LocationDecalsComponent`, `LocationIslandCustomiser`, `LocationExhibitionEnvironmentManager`,
+  `HiddenBodysiteManager`, `StarSystemDataCache`.
+- **Streaming/loading**: `LoadingScreenComponent`, `LoadingScreenObjects`, `HumanoidLoadingScreenObjects`,
+  `LevelBaseComponent`, `ReplicatedLevelContainer`, `ReinstanceManager`.
+- **NPCs and signal sources**: `NPCConversationManagerComponent`, `NPCMissionGiverManager`, `USSRegionManager`
+  (Unidentified Signal Source spawn regions), `USSTimeReporter`, `RandomEventOverrideParameterCache`.
+
+This is the fourth architectural tier found (alongside static DB / live sim / map UI documented earlier): the
+per-system **instance/level streaming layer** that loads and tears down the currently-occupied star system as the
+player jumps between systems, handling USS spawns, NPCs, and the hyperspace cinematic transition itself.
+
+## Clarification: the StellarForge `KeyValue` serializer uses string keys, not hashes
+
+Decompiling `FUN_1439da630` (the field-setter called throughout the serializer documented above) confirms it builds
+literal string-keyed `"KeyValue"` pairs — the field name parameter (`param_2`) is copied directly as a string into
+the pair, not hashed. This is consistent with the field names appearing as real string literals in the decompiled
+code (as shown in the offset table above) and confirms that documentation is accurate. It also means this function
+is *not* related to the separate hash-dispatcher mechanism used by `Market.json`/`ScanOrganic`/etc.
+(`codex-journal.md`) — those remain a distinct, unlocated system; this was a negative result for that specific lead,
+not a resolution of it.
+
+## `ILocationInformation` interface accessors (scripting error-tagging pattern confirmed)
+
+Four small functions (`FUN_140a1d2e0`, `FUN_140acf660`, `FUN_1413de6a0`, `FUN_140a1d400`; 278–491 addresses each)
+reference the string `"ILocationInformation"` — not as a field name, but as an **interface-not-found error tag**,
+the same pattern already seen for `"Failed to find IStellarForge"` in `network.md`'s Lua API findings. This confirms
+a general convention in this codebase's scripting/interface-lookup layer: when a script or system requests an
+interface (`IStellarForge`, `ILocationInformation`, etc.) that isn't available on the current object, the error
+message embeds the literal interface name. `GetBodysiteInfo`/`GetBodysiteID` (referenced only from the 49-function
+Lua API table documented earlier) still have no separate dedicated implementation locatable by string xref — this
+remains a dead end for finding their actual logic; the Lua API table is a dispatch table whose targets are resolved
+through a different, not-yet-found mechanism (consistent with the hash-dispatcher dead ends recorded elsewhere in
+this doc set).
