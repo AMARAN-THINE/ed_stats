@@ -495,3 +495,11 @@ only checks for `flags`/`event`/`timestamp` as required keys): `Flags`, `Flags2`
 `Health`, `Gravity`, `Temperature`, `SelectedWeapon`, `Destination`, `System`, `Body`, `Name`, `Balance`, and the
 nested `ShipLocker` block (`Name`, `OwnerID`, `MissionID`, `Count`, `Type`, `Items`, `Components`, `Consumables`,
 `Data`).
+
+### Hashed-field pattern extended to Outfitting.json, Shipyard.json, NavRoute.json
+
+`FUN_141fa8570` (`Outfitting.json`, 4,822 addrs), `FUN_141fa9850` (`Shipyard.json`, 3,163 addrs), and `FUN_1425e78b0`
+(`NavRoute.json`, 1,273 addrs) all show the identical hashed-field pattern (no field-name string literals beyond
+boolean constants) already confirmed for `Market.json`/`Cargo.json`/`Backpack.json`/`ShipLocker.json`. This is now
+confirmed across 7 of the 9 known status files, making it very likely a uniform convention across the entire
+status-file write path rather than a per-file choice.
