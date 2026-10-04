@@ -152,3 +152,11 @@ the pattern already confirmed for the `StellarForgeInput*` struct serializer in 
 `CodexEntry`/`ScanOrganic` constructors. This is consistent, not coincidental: the same internal serialization
 framework appears to be reused for Stellar Forge planet parameters, journal/codex events, and player status files
 alike.
+
+### Hash-dispatcher hypothesis: not located
+
+An attempt to find the actual field-hash lookup/dispatch function (by checking the most frequently called helper
+functions inside the `Market.json`/`Backpack.json` handlers) did not pan out: the top candidates
+(`FUN_14081fc90`, `FUN_1408218a0`) turned out to be generic container utilities (a growable-array insert/resize
+function with 0x38-byte elements and 1.5x growth, and a recursive tree-walk/destructor), not a hash-keyed field
+setter. The actual hash dispatch mechanism for these handlers remains unlocated.
