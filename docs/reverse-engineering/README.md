@@ -81,3 +81,13 @@ analyzeHeadless <proj_dir> ed -import EliteDangerous64.exe \
   -scriptPath docs/reverse-engineering/tools -postScript Export.py <out_dir> -deleteProject
 ```
 Auto-analysis took roughly 50 minutes. `tools/Export.py` writes `functions.tsv`, `imports.tsv`, `strings.tsv`, `blocks.tsv`.
+
+## Renderer module list (f3d / DX11 backend)
+
+Source-file name strings (compiler-embedded debug paths, see §"Subsystems identified") give the renderer's module
+breakdown: `f3dDevice`, `f3dSwapChain`, `f3dShader`, `f3dResource`, `f3dViews`, `f3dStateBlocks`,
+`f3dVertexShaderBinding`, `f3dCommandList`, `f3dDescriptorSet`, `f3dFrequencyQuery`, `f3dPipelineState`, `f3dQuery`,
+`f3dSystem` — all with a `_DX11.cpp` suffix (i.e. all compiled from DX11-specific source, consistent with this
+executable targeting Windows). Related C++ namespace-qualified identifiers: `f3dGPUBufferHeap`, `f3dGPUHeap`,
+`f3dResourceManager`, `f3dxEffect`, `f3dxEffectTaskContextSegment`. Not decompiled further in this pass; this is a
+structural note on the renderer's module boundaries only.
