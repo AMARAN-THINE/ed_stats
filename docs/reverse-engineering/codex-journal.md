@@ -289,3 +289,15 @@ Additional Powerplay-related identifiers found as class/handler names (not full 
 | `*MicroResources` (Buy/Sell/Trade/Transfer/RequestPower/DeliverPower) | `Name`, `Price`, `Offered`, `Received`, `MarketID`, `TotalCount`, `Direction`, `Context`, `LockerOldCount`/`LockerNewCount` |
 
 This covers the majority of the ship-ownership, engineering, and crafting-related journal events.
+
+## Commander state: `LoadGame`, `Rank`/`EngineerProgress`
+
+| Event | Fields |
+|---|---|
+| `LoadGame` | `Commander`, `Ship`/`ShipID`, `StartLanded`, `StartDead`, `GameMode`, `Group`, `Credits`, `Loan`, `ShipName`, `ShipIdent`, `FuelLevel`/`FuelCapacity`, `HullValue`/`HullHealth`, `ModulesValue`, `Rebuy`, `Horizons`, `Odyssey`, `FID`, `Hot`, `UnladenMass`, `Main`/`Reserve` (fuel tanks), `CargoCapacity`, `MaxJumpRange` |
+| `Rank` | `Combat`, `Trade`, `Explore`, `Soldier`, `Exobiologist`, `Empire`, `Federation`, `CQC` |
+| `Progress`/`Promotion` | per-rank-category progress percentages (same category list as `Rank`) |
+| `EngineerProgress` | `Rank`, `Engineer`, per-superpower reputation (`Federation`/`Empire`/`Independent`/`Alliance`), `Reputation`, `Engineers` array, `RankProgress` |
+
+This confirms the complete commander-rank category list directly from code: Combat, Trade, Explore, Soldier (CQC
+ground combat... actually mercenary), Exobiologist, Empire, Federation, CQC — eight parallel rank tracks.
