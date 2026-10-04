@@ -57,3 +57,26 @@ different GPU vendor/double-precision code paths, as already noted in `data-pack
 `tools/parse_csa.py` implements the `fCSA` → DXBC → chunk parser used here (entry-point extraction, RDEF/ISGN/OSGN
 parsing where present). No shader bytecode, asset data, or binary content from the `.csa` files is included in this
 repository — only the structural findings above (kernel names, counts, sizes) derived from them.
+
+## Instruction-count statistics (token-stream length parse, no opcode decoding)
+
+The `SHEX` chunk's DXBC token stream was walked using only the public, standard DXBC instruction-token length field
+(bits 24–30 of each opcode token) to count instructions per shader, without decoding individual opcode semantics
+(no mnemonic table was implemented/verified in this pass, so no specific instruction names are claimed):
+
+| File | Shaders | Min instructions | Max instructions | Mean |
+|---|---|---|---|---|
+| `Scatter.csa` | 118 | 76 | 452 | 157 |
+| `TerrainComputeShadersDP.csa` | 10 | 872 | 22,075 | 5,612 |
+| `TerrainComputeShadersNvidia.csa` | 10 | 949 | 134,507 | 24,573 |
+| `TerrainComputeShaders.csa` | 10 | 949 | 201,723 | 35,906 |
+
+This is a real, verifiable complexity signal: the scatter/placement kernels are small (dozens to a few hundred
+instructions — consistent with per-point placement decisions), while the `cs_Combined_Planet0_Win64_SM50` terrain
+permutations scale up to ~200K instructions in the largest `TerrainComputeShaders.csa` variant — consistent with a
+single compiled kernel implementing many layered noise octaves and the full feature set (basins, mountains, craters,
+ridges, etc.) documented in `stellar-forge-struct.md`'s struct, baked together into one shader per permutation rather
+than many small dispatches.
+
+Full instruction-level disassembly (mapping opcode numbers to actual operations) was not attempted — it requires
+implementing/verifying the full DXBC Shader Model 5 opcode table, which this pass did not do.
