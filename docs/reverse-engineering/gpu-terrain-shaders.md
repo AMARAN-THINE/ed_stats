@@ -81,6 +81,53 @@ than many small dispatches.
 Full instruction-level disassembly (mapping opcode numbers to actual operations) was not attempted — it requires
 implementing/verifying the full DXBC Shader Model 5 opcode table, which this pass did not do.
 
+## Real instruction-level disassembly (opcode table recovered)
+
+The earlier instruction-count statistics used only the token *length* field (opcode-agnostic). This section adds
+real mnemonic-level disassembly, using a 286-entry DXBC opcode table (number → mnemonic) built from the public,
+standard DXBC/SM5 "tokenized program format" — reconstructed with reference to RenderDoc's open-source (MIT licensed)
+`dxbc_bytecode.h`/`dxbc_bytecode.cpp` (github.com/baldurk/renderdoc), which documents Microsoft's own bytecode format,
+not any Frontier-authored content. The table is `tools/dxbc_opcode_table.json`; the decoder is
+`tools/disasm_dxbc.py`. Operand decoding (register files, swizzles, immediates) was **not** implemented — only
+opcode mnemonic + raw instruction bytes. Sanity-checked: opcode 56 decodes as `MUL`, which was independently the most
+frequent opcode in the earlier blind length-based histogram — consistent with a math-heavy noise/scatter shader,
+giving confidence the table lines up correctly.
+
+### Example: smallest `Scatter.csa` kernel, fully disassembled (76 instructions, matches earlier count exactly)
+
+The first `cs_Scatter_Everywhere_AllSizes0_0_Win64_SM50` kernel (2,092 bytes) decodes cleanly start to end:
+- **Declarations** (instructions 0–10): one constant buffer, one sampler, 3 resources (textures), 2 UAVs (typed,
+  read-write output targets), input signature, temp registers, thread-group dimensions.
+- **Index/hash computation** (≈11–64): integer math dominated by `IADD`/`UDIV`/`UGE`/`XOR`/`USHR`/`AND`/`IMUL`/`IMAD`
+  — the classic shape of a deterministic hash function over an integer cell/grid index (consistent with computing a
+  per-point pseudo-random value from a world position or cell coordinate, not from the CPU-supplied
+  `StellarForgeInputSeed` directly — no constant-buffer read of a scalar seed value was seen in this kernel, only
+  resource/texture reads).
+- **Noise/height sampling** (≈18–28): `SAMPLE_L` (two calls) and `LD` reads against the declared resources —
+  texture-based noise or height-map lookups feeding into the placement decision.
+- **Threshold/branch** (≈29–71): `GE`/`LT` comparisons, `IF`/`ELSE`/`ENDIF` blocks, culminating in
+  `STORE_UAV_TYPED` (two calls) inside the final `IF` block — i.e. the point is written to the output UAV only if it
+  passes the computed threshold test, otherwise the `ELSE` branch stores a sentinel (`MOV` of `0xffffffff` seen at
+  instruction 69).
+- **Exit**: `RET` inside the early-out branch (instruction 15, for an out-of-range index) and after the main body
+  (instruction 75).
+
+**Interpretation** (moderate confidence — mnemonic-level only, operands not decoded): this kernel computes, per grid
+cell, an integer hash of the cell coordinates, samples 2–3 noise/height textures at that location, and writes a
+scatter-point record to a UAV only if a hash-derived and/or noise-derived value clears a threshold — the standard
+shape of GPU object-scattering (place grass/rocks/organisms only where a density function says to). This is
+consistent with `Scatter.csa`'s kernel names (`Scatter_Everywhere_*`, `Scatter_Organics_*`) documented earlier.
+
+### What this does and doesn't get us toward "predict without booting the game"
+- **Real progress**: this confirms the *shape* of the scatter algorithm (hash → noise-sample → threshold → write),
+  not just its name. That's new, verified information this session didn't have before.
+- **Still missing for an offline reimplementation**: the actual register-level operand values (which constant-buffer
+  field feeds which instruction, the exact hash constants/shifts, the exact noise function sampled). Getting those
+  requires implementing full operand decoding (register types, swizzle masks, immediate value extraction) on top of
+  this opcode table — a scoped, specific next step, not a vague "more work needed."
+- The terrain-height kernels (`TerrainComputeShaders*.csa`) are 1–3 orders of magnitude larger (up to ~200K
+  instructions) and were not disassembled in this pass; the method above should apply, but at that scale a bulk/
+  statistical disassembly pass (not manual reading) would be the practical next step.
 ### Operand decoding: scoped out of this pass
 
 Full operand decoding (which register/constant-buffer slot each instruction reads/writes, swizzles, immediate
@@ -115,3 +162,23 @@ This is the first time this investigation has recovered **actual numeric constan
 not just its shape. Caveats: swizzle/write-mask (which vector component(s) each operand addresses) and the extended
 operand modifier token (negate/absolute-value flags) are not decoded, so the exact per-component data flow isn't
 fully resolved — only operand identity and raw values.
+## Comparison: `Scatter_Organics_Aleoids` kernel vs. the simple terrain-scatter kernel
+
+Disassembled a second kernel (`cs_Scatter_Organics_Aleoids0_0_Win64_SM50`, 331 instructions vs. the earlier 76) to
+check whether the hash→sample→threshold shape found above is a fixed template or varies by content type.
+
+**Shared structure**: same declaration block shape (constant buffer, sampler, resources, UAVs), same early integer
+hash computation (`IADD`/`UDIV`/`UGE`/`XOR`/`USHR`/`AND` present in both).
+
+**Real structural difference found**: the Aleoids kernel has 4 declared resources (vs. 3 for the simple terrain
+scatter) and, critically, contains an actual **loop** — `LOOP`/`ENDLOOP`/`BREAKC`/`ILT` each appear 12 times, with
+no loop construct at all in the simpler kernel. This means organism placement isn't just "hash this cell, sample
+noise, threshold" — it iterates (12 times, matching the repeated opcode count, though the loop could execute fewer
+iterations at runtime depending on `BREAKC`'s break condition), likely checking multiple candidate sub-positions or
+neighbor cells before deciding where/whether to place an organism — consistent with biological distribution needing
+more spatial constraint-checking (e.g. avoiding overlap, checking surface suitability at several nearby points) than
+simple rock/rubble scattering.
+
+This is genuine evidence against assuming one simple formula covers all scatter content — different content types
+use measurably different algorithm shapes, which matters for anyone trying to reimplement this offline: a single
+"scatter formula" will not reproduce organism placement correctly even if it nails rock placement.
