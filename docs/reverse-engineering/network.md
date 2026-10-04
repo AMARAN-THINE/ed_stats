@@ -48,3 +48,18 @@ per REST path, e.g. `FUN_1424e4fe0` (7,504 addresses) backs `elite/vessel/embark
 `elite/vehicle/launch`, `elite/vehicle/dock`, `elite/multicrew/launchable/launch`, `elite/multicrew/launchable/dock`,
 and `elite/fighter/switch` — i.e. the game's vehicle/vessel/fighter embark-dock-launch-switch flows are one state
 machine. Largest single-endpoint handler found: `elite/shipyard/modules/store` at `FUN_141f10980` (8,887 addresses).
+
+## Login request builder (decompiled, `FUN_1409ab190` @ `0x1409ab190`, `2.0/elite/user/login`)
+
+Decompiled and checked against the string evidence in the sections above. The function builds the login POST body by
+pulling values out of a config/game-state object (via a vtable call taking a string key) and concatenating them into
+the `&key=value` form already documented: confirmed keys read this way include `GameSeason` and `CqcArena`, matching
+the `&season=` / `&cqcarena=` fields listed earlier. The same request-string literal (`2.0/elite/user/login`) is
+stored with the same ref-counted string header pattern as every other endpoint documented in `endpoint-functions.tsv`.
+The sibling function `FUN_1409b0d70` (`2.0/edserver/login`, 4,144 addresses — the per-game-server login, larger
+because it also negotiates connection/session parameters) and `FUN_1409adcf0` (`2.0/server/time`, time sync) were
+decompiled in the same pass; `FUN_1409adcf0`'s logic was already summarized in `function-map.md`.
+
+This confirms the account-login and game-server-login requests are two distinct calls (matching the two hostnames
+documented above), not one combined flow, and that per-request fields are pulled from a generic key/value config
+store rather than being hard-coded per field.
