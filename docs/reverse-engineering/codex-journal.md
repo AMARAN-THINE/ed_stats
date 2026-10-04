@@ -184,3 +184,13 @@ full here:
 
 This confirms the full breadth of `FSDJump`'s payload directly from code (not just the public journal manual), and
 that this event, like `CodexEntry`, has a parallel debug/CSV export path distinct from its JSON journal form.
+
+## `Docked`/`Landed`/`Undocked` state handler (`FUN_142c993c0`, 1,997 addresses)
+
+This function (the largest of several referencing the string `"Docked"`) is a state-machine/status handler
+referencing exactly three literal strings: `"Docked"`, `"Landed"`, `"Undocked"` — these three mutually-exclusive
+ship-location states, not the full `Docked` journal event's field list (which was already documented via
+`network.md`'s `Docked,Undocked,StationName,...` CSV header). This is most likely internal state-name logging/debug
+display code rather than the JSON event writer itself; the actual `Docked` event JSON writer was not isolated in
+this pass (the event's field list was already recovered from the CSV-header string directly, without needing to
+isolate its writer function).
