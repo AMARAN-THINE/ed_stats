@@ -160,3 +160,27 @@ functions inside the `Market.json`/`Backpack.json` handlers) did not pan out: th
 (`FUN_14081fc90`, `FUN_1408218a0`) turned out to be generic container utilities (a growable-array insert/resize
 function with 0x38-byte elements and 1.5x growth, and a recursive tree-walk/destructor), not a hash-keyed field
 setter. The actual hash dispatch mechanism for these handlers remains unlocated.
+
+## `FSDJump` debug CSV header (`FUN_141d57660`, 549 addresses)
+
+Same pattern as the `CodexEntry` CSV-header writer documented earlier: a gated debug/export path builds a single
+large CSV header string naming every field the event can carry. Summarized by category rather than reproduced in
+full here:
+
+- **Jump/location core**: event type flags (`FSDJump`, `CarrierJump`, `Location`, `SupercruiseEntry`/`Exit`),
+  `StarSystem`, `StarPos`, `Body`/`BodyID`/`BodyType`, `JumpDist`, `BoostUsed`, `SystemAddress`.
+- **Station context**: `Docked`, `StationName`/`Type`/`Government`/`Allegiance`/`Faction`/`Economy`/`Services`,
+  `MarketID`, `DistFromStarLS`.
+- **System economy/politics**: `SystemEconomy`/`SecondEconomy`, `SystemGovernment`, `SystemSecurity`,
+  `SystemAllegiance`, `SystemFaction`, and a nested `Factions` array (`Name`, `Influence`, `Government`,
+  `Allegiance`, `Population`, `Happiness`, state lists).
+- **Powerplay**: `Power`, `Powers`, `ControllingPower`, `PowerplayState` and its progress/reinforcement/undermining
+  sub-fields.
+- **Player state**: `Taxi`, `Multicrew`, `InSRV`, `OnFoot`, `OnPlanet`, `OnStation`, `FuelUsed`, `FuelLevel`,
+  `Latitude`/`Longitude`.
+- **Missions**: nested array (`MissionID`, `Name`, `Expires`, `State`, pass/fail flags, `PassengerMission`).
+- **Conflicts/war**: nested array (`WarType`, `Faction1`/`2`, `Stake`, `WonDays`, `Winner`, state-machine fields,
+  `ThargoidWar`).
+
+This confirms the full breadth of `FSDJump`'s payload directly from code (not just the public journal manual), and
+that this event, like `CodexEntry`, has a parallel debug/CSV export path distinct from its JSON journal form.
