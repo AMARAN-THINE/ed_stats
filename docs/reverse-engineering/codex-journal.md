@@ -385,3 +385,20 @@ stations (Docked/Market/Outfitting/Shipyard), engineering, Fleet Carriers, Power
 on-foot/Odyssey, commander state, and travel/taxi/resurrection — the large majority of the public journal manual's
 event catalogue, each cross-checked against literal strings actually present in the shipped binary rather than taken
 on faith from documentation alone.
+
+## Combat status and squadron event schemas
+
+| Event | Fields |
+|---|---|
+| `HeatWarning`/`HeatDamage` | (no additional fields beyond the event name itself) |
+| `HullDamage` | `Health`, `PlayerPilot`, `Fighter` |
+| `ShieldState` | `ShieldsUp` |
+| `UnderAttack` | `Target` |
+| `NewCommander` | `Name`, `FID`, `Package` |
+
+`Squadron*`-prefixed identifiers (over 70 found) are mostly UI/activity component names for the in-game squadron
+management screens (browsing, applications, bank, carrier integration, logo customisation, leaderboards, chat) rather
+than journal event fields — `SquadronCreateJoin`, `SquadronPromotion`/`SquadronDemotion`, `SquadronInvite`,
+`SquadronBank`/`SquadronBankActivity` and `SquadronCarrier*` are the closest to journal-relevant events, but their
+field lists weren't isolated in this pass (unlike the CSV-header events documented elsewhere in this file, squadron
+events don't appear to share one consolidated header string).
