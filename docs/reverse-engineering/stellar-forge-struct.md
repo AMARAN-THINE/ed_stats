@@ -176,3 +176,33 @@ named access to Stellar Forge body data, system/power state, and a full objectiv
 almost certainly the system behind Community Goals, scripted encounters, and mission scenarios. The actual
 *implementation* of `GetStellarForgeBodyInfo` (what it returns, and whether it touches generation or just reads
 cached/stored body data) was not traced past this registration table in this pass.
+
+## Two more large `StellarForge*`-adjacent functions, decompiled
+
+### `StellarForgeAuxiliaryGenerationSource` (`FUN_1439c5250`, 7,124 addresses)
+
+A second galaxy-wide static database loader (same pattern as `StellarForgeManager`'s init), registering:
+`ColourTableHelper`, `CompoundComponent`, `ElementComponent`, `ReactionComponent` (chemistry/materials data — likely
+what backs mining refinement and material synthesis), `EmissionColours`/`NebulaTable` (nebula rendering data),
+`ServerSystemMetaDataOverride`, and `PortDatabase`/`StationDatabase`/`StationNameDatabase` (station generation data).
+"Auxiliary generation source" is an accurate name: this is supplementary static data the generator draws on, separate
+from the per-planet `StellarForgeInput*` struct.
+
+### `StellarForgeSkyboxMap` (`FUN_143c0fa80`, 7,910 addresses)
+
+Despite the name, this is **not** planet skybox rendering — it's a component-class registration function for the
+**Galaxy Map / System Map** UI and rendering subsystem: `GalaxyMap`, `GalaxyMapCamera`, `GalaxyMapInput`,
+`GalaxyMapLabelManager`, `GalaxyMapNameSearch`, `GalaxyMapNavigation`, `GalaxyMapTradeRoutes`,
+`GalaxyMapFleetCarriers`, `GalaxyMapVisualisation`, `GalaxyMapUIComponent`, `GalaxyRenderManager` (+ "ForCapture"
+screenshot variants), `SystemMap`, `SystemMapCamera`, `SystemMapOrrery`/`SystemMapOrreryCamera`,
+`SystemMapObjectStore`, `SystemMapUIComponent`, `SystemRenderManager`, `SkyboxStarRenderManager`,
+`MilkyWayBBoardManager` (the background starfield billboard renderer), plus settlement/body-placement helpers
+(`AncientSettlementProcessor`, `ManualSettlementProcessor`, `SettlementPositionUpdater`, `PlanetMapBodyManager`,
+`PlanetMapLightComponent`, `SystemContentProcessor`, `BlackHoleInfoHolder`, `VolcanicDatabase`,
+`PlanetResourceResolverInspector`, `TradeRoutesCache`). The "skybox" in the name likely refers to the Milky Way
+backdrop rendered behind the galaxy map, which this function also registers (`MilkyWayBBoardManager`,
+`SkyboxStarRenderManager`), rather than per-planet sky rendering.
+
+Both functions are, like `StellarForgeManager`'s init, component/database **registration** code, not generation
+algorithms — consistent with every large `StellarForge*`-named function found so far being part of the setup/data
+layer rather than the noise evaluation itself (which, per the earlier finding, is GPU-side).
