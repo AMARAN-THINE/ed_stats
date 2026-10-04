@@ -68,3 +68,12 @@ store rather than being hard-coded per field.
 sets its vtable pointers, stores the path string) — the same shape as the journal/event upload constructors in
 `function-map.md`, not additional login logic. The actual field-population logic for this request wasn't reached in
 this pass (it happens after construction, in whatever code calls this constructor and then fills the object).
+
+## Verification: per-endpoint vs. shared dispatcher functions
+
+Across all 351 resolved endpoint→function mappings in `endpoint-functions.tsv`, there are **320 distinct constructor
+functions**. **265 of those are used by exactly one endpoint** (a dedicated request class per REST path, as described
+above), while the remaining ~31 functions are shared dispatchers serving multiple related endpoints (the
+vehicle/vessel/fighter embark-dock-launch-switch example in `function-map.md` is the largest such case). This
+confirms quantitatively — not just from one example — that the dominant pattern is one small class per endpoint, with
+shared dispatchers being the exception for closely related state-machine actions.
