@@ -119,3 +119,13 @@ confirming this is a function that builds multiple distinct request-object types
 non-dispatcher pattern already found for `FUN_1411824e0`. This generalizes the earlier correction: both large
 "shared" colonisation functions are multi-object-construction code, not runtime action switches, unlike the vehicle
 dispatcher (`FUN_1424e4fe0`), which is a genuine verified `switch`.
+
+### Powerplay function confirms multi-constructor pattern generalizes further
+
+`FUN_1425355b0` (3,611 addresses, backing `powerplay2/microresource/deliver`, `powerplay2/microresource/collect`,
+`powerplay2/commander/package/claim`) was checked the same way: no `switch` statement found, and two separate
+top-level vtable resets (not a chained-constructor sequence) — the same multi-object-construction pattern already
+confirmed for both colonisation "dispatcher" functions. This is now observed across colonisation and Powerplay
+endpoint clusters, suggesting the "one function, many endpoint strings" shape generally means multi-constructor code,
+not a runtime dispatcher, with the vehicle dispatcher (`FUN_1424e4fe0`, a genuine `switch`) being the exception
+rather than the rule.
