@@ -467,3 +467,14 @@ These complete the vehicle-launch/dock, repair, and material-trading event group
 | `SRVDestroyed` | `ID`, `SRVType` |
 
 This closes out the Powerplay rank-progression and remaining SRV/drone event groups.
+
+### Hash-dispatcher hunt, third attempt: also a dead end
+
+`UInt32ToStringHashMap` exists as a type name in the binary (confirming a uint32-keyed hash map data structure is
+used somewhere in the codebase) but has zero direct code cross-references — like the RTTI-only registration strings
+documented elsewhere, it's likely only referenced through compiler-generated type metadata, not a findable call site.
+This is the third distinct lead chased for the hashed-field dispatch mechanism (after the `FUN_140869e30`/`ec0`
+service-locator functions and the high-frequency-call candidates in the `Market.json` handler), and all three have
+hit dead ends. The mechanism remains real (confirmed by its effects — zero string literals in affected handlers) but
+unlocated; further progress would need a different method, such as dynamic analysis/tracing, which is out of scope
+for static analysis of this executable alone.
