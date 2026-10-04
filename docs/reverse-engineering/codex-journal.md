@@ -204,3 +204,7 @@ handler referencing the full `FSSSignalDiscovered,SystemAddress,...` CSV header)
 write pattern documented above, further confirming that pattern's reach across both status files and journal event
 construction. `FUN_14113fb20` (793 addrs) and `FUN_141391d20` (306 addrs) are the equivalent pair for
 `FSSDiscoveryScan`, not individually decompiled in this pass.
+
+`FUN_14113fb20` (793 addrs) confirms `FSSDiscoveryScan`'s `BodyCount` and `NonBodyCount` fields against real code
+(matching the CSV header `FSSDiscoveryScan,Progress,BodyCount,NonBodyCount,SystemName,SystemAddress`).
+`FUN_141391d20` (306 addrs) shows no additional field-name literals — hashed-field pattern again.
