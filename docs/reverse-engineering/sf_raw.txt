@@ -1,0 +1,176 @@
+Skipping trying to set this atmosphere
+Required thickness: %s
+Planet is too cold to be an %s, move it somewhere warmer
+Suggested maximum distance from star is %f times the current distance
+Planet is too warm to be an %s, move it somewhere colder
+Suggested minimum distance from star is %f times the current distance
+ Comet 
+ Cluster 
+PlanetColours
+Win64/Shared/StellarForge/
+%s%s/%s
+Colours
+AtmosphereColours
+StellarForgeInputGravity
+SurfaceGravAccelInG
+StellarForgeInputSeed
+StellarForgeChosenMaterials
+Material_%u
+StellarForgeInputCommonVariables
+TectonicActivity
+Volcanism
+MaximumHeight
+StellarForgeInputMaskVariables
+TidallyLocked
+TidalVectorX
+TidalVectorY
+TidalVectorZ
+CrateringFrequency
+BasinMaskBasinBias
+BasinMaskRegionFrequency
+BasinMaskRegionSharpness
+TectonicMaskPlateFracturing
+TectonicMaskPlateThickness
+VolcanismMaskLavaFlowFrequency
+VolcanismMaskLavaFlowMaxSize
+StellarForgeInputBasins
+MinDepth
+MaxDepth
+SizeBias
+BorderSharpness
+StellarForgeInputMountains
+Linearity
+MaxHeight
+StellarForgeInputVolcanoes
+EjectaAmount
+EjectaRadius
+StellarForgeInputCryovolcanoes
+StellarForgeInputEuropaLines
+MaxLength
+Straightness
+Collimation
+EdgeDeformation
+Grouping
+Disjointment
+StellarForgeInputRifts
+StellarForgeInputRidges
+Variation
+StellarForgeInputEscarpments
+FrequencyOfOccurance
+FrequencyOfScarp
+Breadth
+StellarForgeInputMisc
+IceCap
+PolarAxisX
+PolarAxisY
+PolarAxisZ
+LargeScaleDeformationHeight
+IsATectonicWorld
+TextureIndexMapping0
+TextureIndexMapping1
+TextureIndexMapping2
+TextureIndexMapping3
+WangedTextureScalesX
+WangedTextureScalesY
+WangedTextureScalesZ
+WangedTextureScalesW
+MaxRadius
+MinHeight
+StellarForgeInputEjectaCraters
+DirectionLength%ux
+DirectionLength%uy
+DirectionLength%uz
+DirectionLength%uw
+FracRadius%u
+NumCraters
+StellarForgeInputCoarseProportions
+StageOne
+StageTwo
+StageThree
+StellarForgeInputInternalValues
+GravitationalAccelerationAtSurface
+GravitatonalStress
+CoreFraction
+CrustFraction
+MagmaFraction
+DifferentialTemp
+PlateThicknessFactor
+StellarForgeAdditionalInformation
+DisplacementItemName
+Amplitude0
+Amplitude1
+Amplitude2
+Amplitude3
+DistanceStart
+DistanceFinish
+StellarForgeInputV3BodySize
+MaxPhysicalHeight
+StellarForgeInputV3SurfaceInfo
+AverageSurfaceTemperature
+StellarForgeInputV3CraterInfo
+LargestCraterSize
+LargestCraterDepth
+CraterFrequency
+StellarData
+StellarForgeInputSmallCraters
+StellarForgeInputLargeCraters
+StellarForgeInputHugeCraters
+Earthlike body
+Terrestrial_EarthLike
+Water world
+Terrestrial_WaterWorld
+Ammonia world
+Terrestrial_AmmoniaWorld
+Metal rich body
+Terrestrial_MetalRich
+High metal content body
+Terrestrial_HighMetalContent
+Rocky body
+Terrestrial_Rocky
+Icy body
+Terrestrial_Icy
+Rocky ice body
+Terrestrial_RockyIce
+Water giant
+Jovian_WaterGiant
+Water giant with life
+Jovian_WaterGiant_WithLife
+Gas giant with water based life
+Jovian_WaterLife
+Gas giant with ammonia based life
+Jovian_AmmoniaLife
+Sudarsky class I gas giant
+Jovian_SudarskyClassI
+Sudarsky class II gas giant
+Jovian_SudarskyClassII
+Sudarsky class III gas giant
+Jovian_SudarskyClassIII
+Sudarsky class IV gas giant
+Jovian_SudarskyClassIV
+Sudarsky class V gas giant
+Jovian_SudarskyClassV
+Helium rich gas giant
+Jovian_HeliumRich
+Helium gas giant
+Jovian_Helium
+oxygen
+ammonia
+carbon dioxide
+sulfur dioxide
+nitrogen
+water rich
+methane rich
+ammonia rich
+carbon dioxide rich
+methane
+helium
+neon rich
+argon rich
+silicate vapour
+metallic vapour
+water magma
+sulphur dioxide magma
+ammonia magma
+methane magma
+nitrogen magma
+rocky magma
