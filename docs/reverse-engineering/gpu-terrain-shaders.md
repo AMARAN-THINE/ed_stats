@@ -252,3 +252,33 @@ already observed, with the `DP3` dot product between the selected gradient and t
 extracted, verifiable data — not inference — and is directly usable by anyone implementing a compatible noise
 function offline: the gradient table, the instruction shape, and the per-cell hash pattern are now all confirmed
 from the shipped shader bytecode itself.
+
+## Hash function constants extracted: matches public xxHash32 algorithm
+
+The integer hash sequence feeding the gradient-index selection (instructions ~77–105 of the terrain kernel) was
+operand-decoded. Extracted constants and structure:
+
+```
+IMUL  T13 = TEMP10 * TEMP2 * {3635633, 15452791, ...}   (per-axis mixing, likely x/y/z coordinate constants)
+IMAD  TEMP2 = TEMP2 * 11710013 + TEMP2
+IMAD  TEMP2 = CB[2][0] * 13953839 + TEMP2               (mixes in a constant-buffer value — likely the seed)
+USHR  TEMP3 = TEMP2 >> 15
+XOR   TEMP3 = TEMP2 ^ TEMP3
+IMUL  T13   = TEMP3 * TEMP3 * 374761393
+USHR  TEMP4 = TEMP3 >> 13
+XOR   TEMP3 = TEMP3 ^ TEMP4
+```
+
+**`374761393` is `XXH_PRIME32_5`**, one of the five public prime constants from the well-known, open-source
+**xxHash32** non-cryptographic hash algorithm (BSD-licensed, created by Yann Collet,
+github.com/Cyan4973/xxHash) — not a Frontier-original constant. The surrounding shift/XOR/multiply pattern
+(`h ^= h >> 15; h *= prime; h ^= h >> 13`) also matches xxHash32's public avalanche-finalization structure.
+This repeats 3 times in the disassembly (once per spatial axis, each reading a different `CB[2][0]`-style seed
+input and different per-axis constants `3635633`/`15452791`), consistent with hashing a 3D lattice coordinate plus
+a seed value per axis before selecting a gradient vector from the 12-entry table documented above.
+
+**Significance for offline reimplementation**: the per-lattice-point hash is now understood to be close to (if not
+exactly) a standard, publicly documented, open-source algorithm with freely available reference code — this is a
+substantially easier target to replicate exactly than an undocumented proprietary hash would have been. The other
+constants (`3635633`, `15452791`, `11710013`, `13953839`) were not matched against a named public algorithm in this
+pass and should be treated as this implementation's own mixing constants unless/until matched elsewhere.
