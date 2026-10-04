@@ -77,3 +77,13 @@ above), while the remaining ~31 functions are shared dispatchers serving multipl
 vehicle/vessel/fighter embark-dock-launch-switch example in `function-map.md` is the largest such case). This
 confirms quantitatively — not just from one example — that the dominant pattern is one small class per endpoint, with
 shared dispatchers being the exception for closely related state-machine actions.
+
+## Colonisation dispatcher cluster
+
+`FUN_1411824e0` (3,361 addresses) is a second major shared dispatcher, backing 7 colonisation endpoints:
+`claim/cancel`, `claim/candidate_filters`, `claim/claimsystem`, `constructioneffort/contribute`,
+`constructioneffort/planetary/create`, `constructioneffort/space/create`, `launchcolonisationbeacon`, and
+`rename/renamemarket` — i.e. the colonisation claim/construction/beacon/rename actions are one state-machine-style
+handler, the same pattern as the vehicle dispatcher in `function-map.md`. `FUN_141183210` (1,885 addresses) is a
+second, smaller colonisation dispatcher covering `claim/deny_starsystems`, `management/architect/colonised_systems`,
+and the `resources/marketlink/weighting` / `resources/optionsfulllist` read endpoints.
