@@ -366,3 +366,31 @@ corners. Like the gradient table and the `xxHash32` prime, this confirms the imp
 documented noise technique (simplex/Perlin-family), not a proprietary invention — which is good news for anyone
 reimplementing it offline, since reference implementations of this exact technique are freely available and
 well-studied.
+
+## Octave loop found: data-driven, reads count from `cb1[80]`
+
+Correcting the initial guess above (the first `LOOP` is a 4-corner iteration, bound `TEMP4 >= 4`, not octaves).
+The **second** `LOOP` (disassembly lines 264–587) is the real octave loop:
+
+```
+MOV   TEMP12 = 0                              -- octave counter
+LOOP:
+  IEQ   TEMP12 == CB[1][80]                   -- compare counter to octave count
+  BREAKC                                       -- exit when counter reaches it
+  MUL   TEMP13 = CB[3][0] * CB[1][TEMP12]     -- per-octave value indexed by counter, scaled
+  MAD   TEMP14 = TEMP0 * CB[2][0] + TEMP13    -- combine with coordinate and seed
+  DP3   ... (per-octave lattice noise evaluation continues)
+  IADD  TEMP12 = TEMP12 + 1
+ENDLOOP
+```
+
+**`CB[1][80]` is the octave count**, read at runtime from the last element of the 81-vec4 `cb1` parameter buffer
+(offsets 0–80) — confirming octave count is a genuine per-planet/per-dispatch configurable parameter sourced from
+the large parameter buffer already cross-validated against the CPU-side `StellarForgeInput*` struct, not a fixed
+constant baked into the shader. `CB[1][TEMP12]` (indexed by the loop counter) is very likely a per-octave array
+(frequency and/or amplitude multipliers), consistent with the `frequency`/`lacunarity`/`persistence`/`octaves`
+parameters already documented in the embedded `PerlinModule` noise-graph XML from earlier in this investigation —
+this is now tied to a concrete constant-buffer offset in real compiled code, not just graph metadata.
+
+This resolves the earlier open question about whether this specific kernel implements multi-octave fractal noise:
+**it does**, via this data-driven loop, separate from the 4-corner interpolation loop.
