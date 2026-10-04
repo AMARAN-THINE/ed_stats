@@ -138,3 +138,24 @@ component-count, operand-type, and index-dimension/type fields) from scratch. Ra
 third-party open-source project's specific decoder implementation to shortcut this, it's left as an explicit,
 scoped next step: write an independent operand decoder from the public bit-format description. This is a concrete,
 bounded piece of work, not an open-ended one — but it wasn't done here.
+
+## Comparison: `Scatter_Organics_Aleoids` kernel vs. the simple terrain-scatter kernel
+
+Disassembled a second kernel (`cs_Scatter_Organics_Aleoids0_0_Win64_SM50`, 331 instructions vs. the earlier 76) to
+check whether the hash→sample→threshold shape found above is a fixed template or varies by content type.
+
+**Shared structure**: same declaration block shape (constant buffer, sampler, resources, UAVs), same early integer
+hash computation (`IADD`/`UDIV`/`UGE`/`XOR`/`USHR`/`AND` present in both).
+
+**Real structural difference found**: the Aleoids kernel has 4 declared resources (vs. 3 for the simple terrain
+scatter) and, critically, contains an actual **loop** — `LOOP`/`ENDLOOP`/`BREAKC`/`ILT` each appear 12 times, with
+no loop construct at all in the simpler kernel. This means organism placement isn't just "hash this cell, sample
+noise, threshold" — it iterates (12 times, matching the repeated opcode count, though the loop could execute fewer
+iterations at runtime depending on `BREAKC`'s break condition), likely checking multiple candidate sub-positions or
+neighbor cells before deciding where/whether to place an organism — consistent with biological distribution needing
+more spatial constraint-checking (e.g. avoiding overlap, checking surface suitability at several nearby points) than
+simple rock/rubble scattering.
+
+This is genuine evidence against assuming one simple formula covers all scatter content — different content types
+use measurably different algorithm shapes, which matters for anyone trying to reimplement this offline: a single
+"scatter formula" will not reproduce organism placement correctly even if it nails rock placement.
