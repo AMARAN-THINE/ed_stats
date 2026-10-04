@@ -101,3 +101,34 @@ planet — but the code path that builds a per-planet graph from the struct was 
 
 This also confirms `StellarForgeInputSeed` (handled by `FUN_1439da060`, decompiled above) is, as expected, the Perlin
 seed — `FUN_1439da060` is still only the serializer for it, not the RNG/hash itself.
+
+## Serializer chain fully mapped — generation math is not in this binary's CPU code
+
+All sub-block functions called from `FUN_1439d7f30` were decompiled and checked: `FUN_1439d9520` (ejecta craters),
+`FUN_1439da060` (seed), `FUN_1439d9b40` (module/gravity-adjacent block), `FUN_1439d9200`
+(`StellarForgeAdditionalInformation` / `DisplacementItemName`), `FUN_1439d9740` (`StellarForgeInputGravity`). Every
+one follows the identical pattern: allocate a key string, open/append a named section via `FUN_1439c7490`, write one
+or more fields via `FUN_1439da630`/`FUN_1439da8e0`. **None of them compute anything** — this whole call tree,
+~8,000+ addresses across six functions, is confirmed to be the planet-parameter export/serialization path, not the
+generator.
+
+This also means the noise-module graphs documented above (`PerlinModule`, `BillowModule`, etc.) are evaluated
+somewhere else, not in this call tree.
+
+### Where the real terrain math likely lives
+The CSA compute-shader archives (`PlanetShaders/*.csa`, documented in `data-packages.md`) contain named entry points
+such as `cs_Scatter_Everywhere_AllSizes0_0_Win64_SM50` — i.e. GPU compute shaders for planetary surface/scatter
+generation. These are **separate data files from the game installation, not inside `EliteDangerous64.exe`**, and were
+not obtained or analysed in this session (only the executable was downloaded). If the actual per-vertex terrain
+generation algorithm is wanted next, the concrete next step is pulling a `.csa` file from a real game install,
+extracting its DXBC shader blobs per the method in `data-packages.md` §2.4, and disassembling the compute shader
+bytecode (e.g. with a DXBC disassembler) — a different, GPU-side investigation from anything possible with the exe
+alone.
+
+### Summary of what is / isn't established about Stellar Forge from this exe
+- **Established**: full class/field taxonomy (`stellar-forge.md`), verified struct byte-offsets for the planet input
+  parameters (above), the noise-module graph file format and that it uses standard octave/fractal Perlin noise
+  (`DefaultSurface`/`DefaultClouds` presets).
+- **Not established from this binary**: the function(s) that build a per-planet noise graph from the input struct;
+  the actual height/colour evaluation math; anything GPU-side (that lives in `.csa`/DXBC, a separate asset, not this
+  executable).
