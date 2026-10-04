@@ -227,3 +227,28 @@ flow (13 each).
 This is the strongest evidence yet connecting the CPU-side struct/noise-graph findings to the actual GPU execution:
 Stellar Forge's terrain height is computed by hash-seeded gradient noise (Perlin-family), evaluated per-sample on
 the GPU, parameterized by (at least) 5 constant buffers worth of per-planet input.
+
+## Gradient table extracted: confirms standard public-domain Perlin gradient scheme
+
+The `DP3` instructions identified above read their second operand from an **immediate constant buffer** (`ICB`) —
+data baked directly into the shader bytecode at compile time, not supplied at runtime. That ICB is the `CUSTOMDATA`
+block at instruction 1 (opcode 53, correctly decoded after the bug fix above): 48 floats = 12 four-component vectors
+(last component always 0, i.e. 12 3D vectors):
+
+```
+( 1, 1, 0)  (-1, 1, 0)  ( 1,-1, 0)  (-1,-1, 0)
+( 1, 0, 1)  (-1, 0, 1)  ( 1, 0,-1)  (-1, 0,-1)
+( 0, 1, 1)  ( 0,-1, 1)  ( 0, 1,-1)  ( 0,-1,-1)
+```
+
+This is **exactly** the standard 12-edge-of-cube gradient vector set from the well-known, publicly published
+"improved Perlin noise" gradient scheme — every component is from {-1, 0, 1}, and the set is the midpoints of a
+cube's 12 edges. This specific table is a long-standing public-domain mathematical constant, independently used in
+countless open-source and academic noise implementations; it is not something unique to or original with Frontier.
+
+**Conclusion**: Stellar Forge's terrain-height generator evaluates **standard, textbook 3D gradient (Perlin) noise**
+using the public 12-gradient edge scheme, hashed per-lattice-point via the integer `XOR`/`USHR`/`IMUL` sequence
+already observed, with the `DP3` dot product between the selected gradient and the sample offset. This is real,
+extracted, verifiable data — not inference — and is directly usable by anyone implementing a compatible noise
+function offline: the gradient table, the instruction shape, and the per-cell hash pattern are now all confirmed
+from the shipped shader bytecode itself.
