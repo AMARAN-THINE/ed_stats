@@ -406,3 +406,21 @@ density value, with different behavior for negative vs. non-negative input — b
 purpose (height curve shaping? erosion-style remapping?) is **not confirmed**, only the literal constants and
 instruction shape are. Flagging this honestly rather than guessing a specific named technique, unlike the gradient
 table and hash constant above which matched known public references exactly.
+
+## Cross-validated against a second file family: structure confirmed, not coincidental
+
+To check whether the pipeline reconstructed above is specific to `TerrainComputeShadersDP.csa` or general, the
+smallest permutation of **`TerrainComputeShaders.csa`** (the plain, non-"DP" file, 28,148 bytes) was independently
+disassembled and operand-decoded the same way. Result: **identical structure**, not just similar:
+
+- Same 5 constant-buffer declaration sizes (1, 81, 1, 22, 6 vec4s) in the same order.
+- Same two-loop shape: first loop bound `TEMP >= 4` (4-corner iteration), second loop bound
+  `TEMP == CB[1][80]` (data-driven octave count) — exact same constant-buffer offset.
+- `hash % 12` gradient-table-index reduction appears **16 times** (vs. multiple occurrences in the DP variant).
+- The `374761393` (`XXH_PRIME32_5`) hash constant appears **exactly 20 times**, matching the DP variant's count
+  precisely.
+
+This rules out the earlier findings being a one-off artifact of a single compiled permutation — the gradient table,
+hash algorithm, 4-corner/octave-loop structure, and constant-buffer roles are confirmed as the shared design across
+(at least) these two shader file families, strengthening confidence that this is "the" terrain algorithm rather than
+one variant among many unrelated ones.
