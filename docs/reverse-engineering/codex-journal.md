@@ -435,3 +435,16 @@ This closes out the mission-lifecycle event group, completing the journal-event 
 `RenameSuitLoadout`/`LoadoutEquipModule`/`LoadoutRemoveModule`: `Name`, `Price`, `SuitID`, `LoadoutID`/`LoadoutName`,
 `Module`/`SlotName`/`ModuleName`/`Modules`, `SuitModuleID`, `SuitName`, `Class`, `SuitMods`, `WeaponMods`.
 Request field: `&suitLoadoutSlotId=`.
+
+## Vehicle/SRV/fighter and repair event schemas
+
+| Event | Fields |
+|---|---|
+| `DockSRV`/`DockFighter`/`VehicleSwitch` | `To`, `ID`, `Embark`, `Disembark`, `DropshipDeploy`, `Muilticrew` [sic], `SRV`, `Taxi`, `Crew`, `Name`, `Role`, `SRVType` |
+| `FighterDestroyed` | `ID` |
+| `LaunchDrone` | `Type` |
+| `AfmuRepairs` | `Module`, `FullyRepaired`, `Health` |
+| `ReservoirReplenished` | `FuelMain`, `FuelReservoir` |
+| `MaterialTrade` | `MarketID`, `TraderType`, `Material`/`MaterialID`, `Quantity`, `Paid`, `Received`, `Category` |
+
+These complete the vehicle-launch/dock, repair, and material-trading event groups.
