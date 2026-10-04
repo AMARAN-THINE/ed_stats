@@ -268,3 +268,16 @@ code (as shown in the offset table above) and confirms that documentation is acc
 is *not* related to the separate hash-dispatcher mechanism used by `Market.json`/`ScanOrganic`/etc.
 (`codex-journal.md`) — those remain a distinct, unlocated system; this was a negative result for that specific lead,
 not a resolution of it.
+
+## `ILocationInformation` interface accessors (scripting error-tagging pattern confirmed)
+
+Four small functions (`FUN_140a1d2e0`, `FUN_140acf660`, `FUN_1413de6a0`, `FUN_140a1d400`; 278–491 addresses each)
+reference the string `"ILocationInformation"` — not as a field name, but as an **interface-not-found error tag**,
+the same pattern already seen for `"Failed to find IStellarForge"` in `network.md`'s Lua API findings. This confirms
+a general convention in this codebase's scripting/interface-lookup layer: when a script or system requests an
+interface (`IStellarForge`, `ILocationInformation`, etc.) that isn't available on the current object, the error
+message embeds the literal interface name. `GetBodysiteInfo`/`GetBodysiteID` (referenced only from the 49-function
+Lua API table documented earlier) still have no separate dedicated implementation locatable by string xref — this
+remains a dead end for finding their actual logic; the Lua API table is a dispatch table whose targets are resolved
+through a different, not-yet-found mechanism (consistent with the hash-dispatcher dead ends recorded elsewhere in
+this doc set).
