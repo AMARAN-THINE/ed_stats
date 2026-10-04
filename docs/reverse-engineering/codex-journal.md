@@ -486,3 +486,12 @@ for static analysis of this executable alone.
 | `BuyExplorationData`/`SellExplorationData`/`MultiSellExplorationData` (legacy, pre-Codex) | `System`, `Cost`, `Systems`, `Discovered`, `BaseValue`, `Bonus`, `TotalEarnings`, `SystemName`, `NumBodies` |
 | `RedeemVoucher` | `Type`, `Amount`, `Faction` |
 | `CarrierTradeOrder` | `CarrierID`, `BlackMarket`, `Commodity`, `PurchaseOrder`/`SaleOrder`, `CancelTrade`, `Price` |
+
+## `Status.json` full field schema
+
+Confirmed via literal CSV-header string (complements the decompiled reader `FUN_142e874a0` documented earlier, which
+only checks for `flags`/`event`/`timestamp` as required keys): `Flags`, `Flags2`, `Pips`, `FireGroup`, `GuiFocus`,
+`Latitude`/`Longitude`, `Heading`, `Altitude`, `Fuel`, `Cargo`, `BodyName`, `PlanetRadius`, `LegalState`, `Oxygen`,
+`Health`, `Gravity`, `Temperature`, `SelectedWeapon`, `Destination`, `System`, `Body`, `Name`, `Balance`, and the
+nested `ShipLocker` block (`Name`, `OwnerID`, `MissionID`, `Count`, `Type`, `Items`, `Components`, `Consumables`,
+`Data`).
