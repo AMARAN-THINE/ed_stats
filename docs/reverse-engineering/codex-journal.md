@@ -367,3 +367,21 @@ This closes out the trade/mining/ship-maintenance event group.
 | `CargoDepot` | `MissionID`, `StartMarketID`/`EndMarketID`, `ItemsCollected`/`ItemsDelivered`/`TotalItemsToDeliver`, `Progress`, `UpdateType`, `CargoType`, `Count` |
 
 This closes out the wing/multicrew/NPC-crew/cargo-mission event group.
+
+## Remaining travel/mission-flow event schemas
+
+| Event | Fields |
+|---|---|
+| `DataScanned` | `Type` |
+| `DatalinkScan` | `Message` |
+| `DatalinkVoucher` | `Reward`, `VictimFaction`, `PayeeFaction` |
+| `Resurrect` | `Option`, `Cost`, `Bankrupt`, `SellShipOnRebuy`, `ShipType`, `System`, `SellShipId`, `ShipPrice`, `CarrierBankTransfer`, `CarrierID`, `Withdraw`, `PlayerBalance`/`CarrierBalance` |
+| `BookTaxi`/`BookDropship`/`CancelTaxi`/`CancelDropship` | `Cost`, `Refund`, `DestinationSystem`/`DestinationLocation`, `Retreat` |
+| `Touchdown`/`Liftoff` | `Latitude`, `Longitude`, `PlayerControlled`, `NearestDestination`, `Taxi`, `Multicrew` |
+
+This is a natural stopping point for the journal-event survey: combined with everything documented above in this
+file, the schema list now covers exploration (Codex/Scan/Organic/Signals), navigation (FSDJump/NavRoute/Approach),
+stations (Docked/Market/Outfitting/Shipyard), engineering, Fleet Carriers, Powerplay, crime/combat, wing/multicrew,
+on-foot/Odyssey, commander state, and travel/taxi/resurrection — the large majority of the public journal manual's
+event catalogue, each cross-checked against literal strings actually present in the shipped binary rather than taken
+on faith from documentation alone.
