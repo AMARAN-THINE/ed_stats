@@ -198,3 +198,32 @@ one fails, though the exact per-register meaning isn't resolved without full dat
 skeleton but are meaningfully parameterized differently per content type (constant-buffer element count, presence/
 absence of loops) — an offline reimplementation would need per-kernel-type parameter extraction, not one shared
 formula.
+
+## First terrain-height kernel disassembled: DP3 confirms gradient/Perlin noise at instruction level
+
+Decoded the smallest `TerrainComputeShadersDP.csa` permutation (`cs_Combined_Planet0_Win64_SM50`, 873 instructions,
+26,772-byte `SHEX` chunk). Fixed a decoder bug in the process: `CUSTOMDATA`'s opcode is **53** (`0x35`), not `0x33`
+as originally guessed — the earlier blind instruction-count pass (in the first "Instruction-count statistics"
+section above) undercounted on any shader containing a `CUSTOMDATA` block, since it would mis-read the following
+bytes as spurious short instructions. This has been fixed in `tools/disasm_dxbc.py`/`decode_dxbc_operands.py`; the
+earlier aggregate counts were not re-verified in this pass and may be slightly over the true instruction count for
+affected shaders.
+
+**Structure**: declares 5 constant buffers (vs. 1 for the scatter kernels — consistent with far more input
+parameters, matching the large `StellarForgeInput*` struct documented in `stellar-forge-struct.md`), 2 plain
+resources, 2 structured resources, and a structured UAV output (`STORE_STRUCTURED`, not the typed UAV the scatter
+kernels use).
+
+**Opcode mix**: dominated by `MUL`(135)/`MAD`(93)/`ADD`(87) — expected for heavy math — but critically includes
+**`DP3` 60 times**. `DP3` (3-component dot product) is the signature instruction of gradient-noise evaluation:
+classic Perlin/simplex noise computes, at each lattice corner, a dot product between a pseudo-random gradient vector
+and the offset from that corner to the sample point. This **confirms at the bytecode level** what the embedded
+`PerlinModule` noise-graph XML (found earlier via string table) only implied — the terrain height function really
+does execute gradient-noise math, not some unrelated technique. Also present: `FTOD`/`DTOF`-family conversions
+(float↔double; this is the "DP" = double-precision variant), `UDIV`/`USHR`/`XOR`/`IMUL` (the same integer hash shape
+seen in the scatter kernels, likely computing lattice-cell pseudo-random gradients), and `IF`/`ELSE`/`ENDIF` control
+flow (13 each).
+
+This is the strongest evidence yet connecting the CPU-side struct/noise-graph findings to the actual GPU execution:
+Stellar Forge's terrain height is computed by hash-seeded gradient noise (Perlin-family), evaluated per-sample on
+the GPU, parameterized by (at least) 5 constant buffers worth of per-planet input.

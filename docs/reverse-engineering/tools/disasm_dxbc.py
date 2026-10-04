@@ -15,7 +15,7 @@ def disasm_shex(shex, max_instr=100000):
         extended = (token >> 31) & 1
         mnem = OPCODES.get(opcode, 'OP_%d'%opcode)
         if length == 0:
-            if opcode == 0x33 and pos+8 <= len(shex):  # CUSTOMDATA has explicit length dword
+            if opcode == 0x35 and pos+8 <= len(shex):  # CUSTOMDATA has explicit length dword
                 ext_len, = struct.unpack('<I', shex[pos+4:pos+8])
                 length = max(ext_len, 2)
             else:
