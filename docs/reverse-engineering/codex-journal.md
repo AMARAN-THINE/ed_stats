@@ -428,3 +428,10 @@ This closes out the mission-lifecycle event group, completing the journal-event 
 `CommunityGoal`/`CurrentGoals`: `CGID`, `Title`, `SystemName`, `MarketName`, `Expiry`, `IsComplete`, `CurrentTotal`,
 `PlayerContribution`, `NumContributors`, `TierReached`, `PlayerPercentileBand`, `Bonus`, `Name`, `TopTier`,
 `TopRankSize`, `PlayerInTopRank`.
+
+## Suit/loadout event schema (Odyssey)
+
+`BuyWeapon`/`SellWeapon`/`BuySuit`/`SellSuit`/`CreateSuitLoadout`/`SwitchSuitLoadout`/`DeleteSuitLoadout`/
+`RenameSuitLoadout`/`LoadoutEquipModule`/`LoadoutRemoveModule`: `Name`, `Price`, `SuitID`, `LoadoutID`/`LoadoutName`,
+`Module`/`SlotName`/`ModuleName`/`Modules`, `SuitModuleID`, `SuitName`, `Class`, `SuitMods`, `WeaponMods`.
+Request field: `&suitLoadoutSlotId=`.
