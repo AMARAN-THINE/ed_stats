@@ -456,3 +456,14 @@ These complete the vehicle-launch/dock, repair, and material-trading event group
 | `Music` | `MusicTrack` |
 | `SetUserShipName` | `Ship`, `ShipID`, `UserShipName`, `UserShipId` |
 | `CrimeVictim` | `Offender` |
+
+## Powerplay rank/merits and remaining SRV/drone event schemas
+
+| Event | Fields |
+|---|---|
+| `PowerplayJoin`/`PowerplayLeave` | `Power`, `FromPower`/`ToPower`, `Rank`, `Merits`, `TimePledged` |
+| `Powerplay` (status/merits events) | `PowerplayMerits`, `MeritsGained`, `TotalMerits`, `PowerplayRank` |
+| `RepairDrone` | `HullRepaired`, `CockpitRepaired`, `CorrosionRepaired` |
+| `SRVDestroyed` | `ID`, `SRVType` |
+
+This closes out the Powerplay rank-progression and remaining SRV/drone event groups.
