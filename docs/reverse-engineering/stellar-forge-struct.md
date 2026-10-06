@@ -1,5 +1,44 @@
 # Stellar Forge — planet input struct layout (decompiled, verified)
 
+## Seed derivation located: a real Thomas Wang 64-to-32 integer hash, found by walking the call chain upward
+
+Rather than guessing addresses, the call chain was walked upward from the already-known seed serializer
+(`FUN_1439da060`): its single caller is `FUN_1439d7f30` (the top-level struct serializer below); its single
+caller in turn is `FUN_143cd0400`, an async-task state machine (offset `0x74` holds a 0/1/2/3 state field) that,
+on reaching state 2, calls `FUN_1439168e0(local_8a8, local_8e8)` — the function that actually **builds** the
+`StellarForgeInput` struct (`param_1`) by copying fields out of a body/celestial-object pointer (`param_2`),
+before `FUN_1439d7f30` serializes it. `FUN_1439168e0` contains this inline, twice (once unconditionally near the
+top, once more inside an `if (flagbyte == 0) { ... } else { uVar5 = param_2[200]; }` cached-vs-recompute branch
+near the end):
+```
+uVar8 = param_2[3] * 0x40000 + ~param_2[3];      // key*2^18 + ~key  == (~key) + (key<<18)
+uVar8 = (uVar8 >> 0x1f ^ uVar8) * 0x15;           // key ^= key>>31; key *= 21
+uVar8 = (uVar8 >> 0xb  ^ uVar8) * 0x41;           // key ^= key>>11; key += key<<6 (== key*65)
+result = (uint)(uVar8 >> 0x16 ^ uVar8);           // key ^= key>>22; truncate to 32 bits
+```
+This is byte-for-byte **Thomas Wang's public-domain 64-bit-to-32-bit integer hash** (`hash6432shift`), down to
+every shift amount (31/11/22) and multiplier (21, and 65 expressed as `key + key<<6`). Verified independently in
+Python against the compiled constants — see `tools/` commit for the check. The result is written directly to
+`*(uint*)((longlong)param_1 + 0x834)`, which is **exactly** struct offset `0x20d` in dwords (`0x20d * 4 = 0x834`)
+— the field this document had already identified (before this trace) as `Seed`, confirming the match isn't
+coincidental.
+
+**The hash input is `param_2[3]`** — a 64-bit field at byte offset `0x18` of the body/celestial-object pointer
+passed into `FUN_1439168e0`. This is the actual, located, verified terrain-seed derivation:
+```
+Seed = WangHash64to32(body_object[0x18])
+```
+This single `uVar8`/hash sequence is the direct answer to the "SystemAddress → generation seed" search that
+every previous attempt this session (string xrefs, raw address scans, and the external document's debunked claim)
+failed to find — found here not by searching for the algorithm, but by following the one real, unambiguous call
+chain from the already-confirmed seed *consumer* back to its producer.
+
+**What's still open:** whether `body_object+0x18` **is** the game's `SystemAddress`/`BodyID` value, or some other
+per-body 64-bit identifier (e.g. an internal pointer-derived or session-local ID) that merely correlates with it,
+has not yet been independently confirmed — that requires tracing where `body_object+0x18` itself is written, which
+this pass did not do. The hash function identification itself is solid (exact algorithmic match); the semantic
+claim "this IS the SystemAddress" is not yet proven and should be treated as the next concrete step, not fact.
+
 `FUN_1439d7f30` (`0x1439d7f30`, 4,802-address function) is a **serializer**: it walks a fixed in-memory struct
 (`param_1`, a pointer treated as `undefined4*`, so offsets below are in 4-byte units unless noted) and writes each
 field out under its string name via `FUN_1439da630` (float field) / `FUN_1439da8e0` (bool field) into a key/value

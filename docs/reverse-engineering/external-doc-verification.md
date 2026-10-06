@@ -106,3 +106,14 @@ matching the claimed bitfield schema anywhere in it. This is the **fourth of fou
 document to fail verification (MT19937, Wang hash, Park-Miller LCG, SystemAddress unpacker), with one incidental
 real finding (DJB2 hash, unrelated purpose) along the way. All four core PRNG/coordinate claims in the document are
 confirmed false against this binary; none should be relied on without independent re-verification.
+
+## Postscript: a real Thomas Wang hash was later found independently, at a different address
+
+A subsequent, unrelated investigation (walking the real call chain up from the confirmed `Seed` struct field —
+see `stellar-forge-struct.md`) found a genuine, byte-for-byte implementation of Thomas Wang's 64-to-32 integer
+hash inside `FUN_1439168e0`, used as the actual terrain-seed derivation. This does **not** vindicate the external
+document's Wang-hash claim above: that claim named different addresses (`0x1437b13e0`/`0x143b83fc0`), which were
+checked and still contain unrelated code. The algorithm existing somewhere in this binary (it's a famous, widely
+publicized public-domain hash — Elite Dangerous using it isn't surprising) is not the same as the document having
+correctly located it; it hadn't. This is noted here only to avoid an apparent contradiction between this file and
+`stellar-forge-struct.md`, not as a retraction of the "false" verdict above, which stands.
