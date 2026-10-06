@@ -561,3 +561,16 @@ the `TerrainComputeShadersNvidia.csa` family appears to use single-precision mat
 consistent with the file names/earlier documentation (Nvidia vs. double-precision vs. plain variants being different
 GPU-vendor/precision code paths for the same underlying generator) but adds a concrete instruction-level distinction
 between them beyond just file size.
+
+## Hash constant and corner-loop confirmed in the Nvidia-variant largest permutation too
+
+Within the first 50,000 decoded instructions of the ~4MB Nvidia-variant largest permutation: the `374761393`
+(`XXH_PRIME32_5`) hash constant appears **48 times**, and the `UGE ... imm(4,)` 4-corner loop bound is present
+(instruction 340084 in the raw token stream) — confirming the core per-corner hash and gradient-selection structure
+generalizes to this third, much larger file too, not just the two smaller files checked earlier.
+
+**Inconclusive, not contradictory**: the `cb1[80]` octave-count marker seen in the smaller kernels was not found
+within this 50,000-instruction window — only `cb1[0]`/`cb1[1]` accesses appear here. Given this permutation is
+roughly an order of magnitude larger than the ones where `cb1[80]` was found, the octave-loop section likely sits
+further into the shader than this window reaches, rather than being genuinely absent. Not confirmed either way in
+this pass; stated as an open item rather than assumed.
