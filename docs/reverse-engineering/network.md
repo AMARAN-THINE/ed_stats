@@ -165,3 +165,6 @@ names), consistent with the system-wide pattern already confirmed elsewhere.
 
 `FUN_14260d130` (`elite/starsystem`, 1,404 addresses) references `"WingNavLock"` — likely tied to the wing
 nav-lock/follow-target feature (sharing a target system with wing members), otherwise uses the hashed-field pattern.
+
+`FUN_141e89ac0` (`elite/resources/finance`, 4,755 addresses) references `"ShipShop2"` — likely an internal
+UI/economy category tag for the shipyard purchase flow, otherwise hashed-field pattern.
