@@ -168,3 +168,6 @@ nav-lock/follow-target feature (sharing a target system with wing members), othe
 
 `FUN_141e89ac0` (`elite/resources/finance`, 4,755 addresses) references `"ShipShop2"` — likely an internal
 UI/economy category tag for the shipyard purchase flow, otherwise hashed-field pattern.
+
+`FUN_1421d9180` (1,870 addresses, `cqc/lobby`, `cqc/matchmaking/cancel`/`enter`/`status`) is single-constructor
+pattern, consistent with npccrew/initiative handlers documented above.
