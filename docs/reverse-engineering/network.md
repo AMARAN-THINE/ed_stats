@@ -159,3 +159,6 @@ than assuming a shape from endpoint count alone.
 
 `FUN_141e84800` (6,221 addresses, `initiative/optin`/`initiative/redeem`) also shows a single top-level vtable
 reset — same single-constructor-with-parameter-selected-action shape as the npccrew handler above.
+
+`FUN_141c09bd0` (`elite/starsystem`, 222 addresses) shows the same hashed-field pattern (no string-literal field
+names), consistent with the system-wide pattern already confirmed elsewhere.
