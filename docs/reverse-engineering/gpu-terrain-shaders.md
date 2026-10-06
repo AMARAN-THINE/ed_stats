@@ -512,3 +512,15 @@ driven by data rather than code branches, or (b) feature-type differentiation ha
 hard-coding a specific feature combination's math, rather than via runtime data in a single general-purpose shader.
 Both are plausible from current evidence; resolving which (or whether it's some mix) needs comparing the full
 instruction-level *logic* between permutations, not just their `cb1` access ranges — not attempted in this pass.
+
+### Control-flow complexity scales with permutation size (real structural growth, not just more math)
+
+The medium permutation has **6 `LOOP` blocks** (vs. 2 in the smallest) and **20 `IF` blocks** (vs. 13) — tripled
+loop count, not just proportionally more straight-line arithmetic. Combined with the unchanged `cb1` access range
+noted above, this points toward interpretation (a) from the prior section being more likely: additional **loops**
+(likely additional terrain-feature evaluation passes — basins, mountains, craters, etc., each as its own
+hash+noise+threshold loop reusing the same small parameter-buffer slots with different runtime values) rather than
+simply more complex math on the same single evaluation. This is consistent with, though not proof of, a design where
+each terrain feature type from `stellar-forge-struct.md` contributes its own loop pass, layered additively, with the
+compiled permutation choosing *how many* feature passes to include (hence the large size range across the 10
+permutations) rather than *which* parameter slots to read.
