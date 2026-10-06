@@ -63,25 +63,45 @@ for i in range(octaveCount):
     sum += evaluate_noise(sample)  // steps 2–5 above, re-evaluated per octave
 ```
 
-## 7. Post-noise remapping — Unresolved exact formula, Confirmed literal constants
+## 7. Post-noise remapping — Confirmed (re-traced from raw bytecode; supersedes the earlier guessed formula)
+
+Two separate remap sites exist, both keyed on the same `*77.0` normalization constant.
+
+**Single-octave pre-loop correction:**
 ```
-result = sum * 77.0
-result = result * CONST_A + 38.5        // CONST_A unresolved
-result = result * 0.8 + 0.2             // or similar — exact operand order not fully traced
-result = result * (1/60) + (1/120)      // purpose unconfirmed
-if result < 0: ...                      // separate branch, not traced
+raw  = dot4(weights, contributions)     // single-octave DP4 combine, step 5
+n    = raw * 77.0                       // normalize into ~[-1, 1]
+t    = n * 0.5 + 0.5                    // -> [0, 1]
+s    = t * 0.8 + 0.2                    // -> [0.2, 1.0] for in-range t; goes negative only if n < -1.0
+if 0 < s:
+    n = n * 2.0                         // double amplitude when the normalized value is in-range
 ```
+
+**Final post-octave-loop shaping (genuine smoothstep):**
+```
+total = sum * 77.0                      // sum = accumulated multi-octave DP4 total, step 6
+t     = (total + 1.0) * 0.5             // -> [0, 1]
+curveA = t*t * (3.0 - 2.0*t)            // = 3t^2 - 2t^3, canonical smoothstep(t)
+curveB = <second, differently-weighted smoothstep-shaped term, same t>  // Probable, see below
+result = (curveA + curveB) * CB[3][21]  // CB[3][21]: per-call runtime scale constant
+```
+`curveB` uses constants `0.1`, `0.6667` (`2/3`), `0.3333` (`1/3`) over the same normalized `t`/derived values —
+clearly a second cubic/Hermite-family term blended with `curveA`, but its exact closed form and purpose (most
+likely a separate channel such as material blend or a secondary height-curve weight) were not fully isolated in
+this pass.
+
+The earlier `38.5`/`1/60`/`1/120` constants reported in a prior pass were a misread of an ephemeral,
+not-saved disassembly run and do not appear in this re-traced, saved instruction sequence — this entry
+supersedes that one.
 
 ## 8. Output — Probable (revised once)
 A single double-precision value (height), written as two 32-bit halves to a structured UAV at byte offsets 0 and 16
 of the output record.
 
 ## What's needed to go further
-1. Resolve step 7's exact formula. Partially traced: the `IF (result < 0)` branch does **not** simply clamp —
-   it re-enters another 4-iteration loop (same `UGE ... 4` / `BREAKC` shape as the main corner loop), i.e. a
-   secondary noise-like pass runs for negative results. Full resolution would need either a proper decompiler
-   (Ghidra-equivalent for DXBC, which doesn't exist off-the-shelf) or substantially more manual register tracing;
-   stopped here to avoid trading accuracy for speed on hand-traced registers at this depth.
+1. Isolate `curveB`'s exact closed form in step 7's final shaping (the second smoothstep-like term blended with
+   `curveA`) and its purpose — most likely a second output channel (material/biome weight) rather than a height
+   correction, given it's blended additively before the single `CB[3][21]` scale rather than branched on.
 2. Confirm step 5's weight-vector construction (`TEMP9`'s role across all 4 corners, not just one).
 3. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — only 2 constants (`3635633`, `15452791`) were
    found directly; a search for a third distinct per-axis constant this session instead found `30798437` recurring

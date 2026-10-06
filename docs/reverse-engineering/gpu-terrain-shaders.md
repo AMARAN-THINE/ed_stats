@@ -395,17 +395,53 @@ this is now tied to a concrete constant-buffer offset in real compiled code, not
 This resolves the earlier open question about whether this specific kernel implements multi-octave fractal noise:
 **it does**, via this data-driven loop, separate from the 4-corner interpolation loop.
 
-## Post-noise remapping constants extracted (`77.0` context resolved further, not fully)
+## Post-noise remapping fully traced (two separate remap sites, both now resolved)
 
-Immediately after the `DP4` combine, the raw noise value goes through a remapping chain with these real constants
-(IEEE-754 decoded): `MUL *77.0`, then `MAD *38.5 + ...`, then two more `MAD`s with `0.8`/`0.2` and `1/60`
-(`0.01667`)/`1/120` (`0.00833`), followed by an `LT 0` test and an `IF` branch (piecewise behavior for negative
-values). `38.5` is exactly `77.0/2`, and `0.8 + 0.2 = 1.0` (consistent with a weighted blend of two terms). This
-reads as a polynomial remapping/shaping function applied to the raw noise output before it becomes a height or
-density value, with different behavior for negative vs. non-negative input — but the precise formula and its
-purpose (height curve shaping? erosion-style remapping?) is **not confirmed**, only the literal constants and
-instruction shape are. Flagging this honestly rather than guessing a specific named technique, unlike the gradient
-table and hash constant above which matched known public references exactly.
+The earlier `77.0`/`38.5`/`0.8`/`0.2` constant cluster was re-located by searching the raw `TerrainComputeShaders.csa`
+bytes for the IEEE-754 encoding of `77.0` (`0x429a0000`) directly, then re-disassembling with full operand decoding
+(`operand_decode.py`) around each hit in the smallest permutation (28,148-byte shader, offset `0x349548`). This
+found **two distinct remap sites** sharing the `*77.0` normalization step, with the exact instruction sequence (not
+guessed) at each:
+
+**Site 1 — pre-octave-loop remap, instructions at dword offset 912–989:**
+```
+TEMP2 = DP4(TEMP10, TEMP5)        // combined 4-corner gradient dot-product sum ("raw" single-octave noise)
+TEMP2 = TEMP2 * 77.0              // normalization: *77.0 maps the summed dot-products into ~[-1, 1]
+TEMP3 = TEMP2 * 0.5 + 0.5         // remap [-1,1] -> [0,1]
+TEMP3 = TEMP3 * 0.8 + 0.2         // affine rescale to [0.2, 1.0] for t in [0,1]
+TEMP3 = (0 < TEMP3)               // LT: true unless TEMP3 went negative, i.e. unless original t < -0.25,
+                                   // i.e. unless the *77.0-normalized noise (TEMP2) < -1.0
+IF TEMP3:
+    TEMP2 = TEMP2 * 2.0           // double the normalized noise value (not the [0,1] remap) when in-range
+```
+This is a clamp-correction / contrast step: the `*0.5+0.5` then `*0.8+0.2` chain only exists to cheaply test
+"did the normalized noise fall below -1.0" (an out-of-single-octave-range excursion) without a separate `LT`
+against a float threshold; when it's *not* out of range, the noise amplitude is doubled before being fed into
+the octave-accumulation loop. `0.8 + 0.2 = 1.0` is incidental to the affine rescale, not a blend weight as
+previously guessed.
+
+**Site 2 — post-octave-loop remap, instructions at dword offset 5438–5784 (after the data-driven octave loop
+documented above), a genuine smoothstep:**
+```
+TEMP1 = DP4(TEMP17, TEMP14)        // final accumulated multi-octave noise sum
+TEMP1 = TEMP1 * 77.0               // same *77.0 normalization constant as Site 1
+TEMP1 = TEMP1 + 1.0
+TEMP1 = TEMP1 * 0.5                // TEMP1 = t = (sum*77.0 + 1.0) * 0.5   -- remap to [0,1]
+TEMP2 = TEMP1 * -2.0 + 3.0          // TEMP2 = 3 - 2t
+TEMP1 = TEMP1 * TEMP1               // TEMP1 = t^2
+TEMP1 = TEMP1 * TEMP2               // TEMP1 = t^2*(3-2t) = 3t^2 - 2t^3   <- canonical smoothstep(t)
+```
+`3t² − 2t³` is the textbook Hermite/"smoothstep" cubic (the same curve used in Ken Perlin's own smoothstep and
+in countless terrain/shader pipelines) applied to the fully-summed, `77.0`-normalized noise value. The
+instructions immediately following (`*0.1`, a second `0.6667/0.3333`-weighted smoothstep-like block feeding
+`TEMP2`, then `TEMP1 = TEMP1 + TEMP2`) blend this smoothstepped value with a second, differently-weighted
+smoothstep term before the result is multiplied by `CB[3][21]` (a per-call constant-buffer scale) — i.e. this is
+a **two-term blended smoothstep shaping curve**, not a single formula; the second term's exact role (a secondary
+curve for a different biome/material channel, most likely) is not yet traced further.
+
+The earlier "`1/60`/`1/120`" constants were a misread from the original (now superseded) pass — they do not
+appear in this corrected, re-traced instruction sequence; both remap sites use only `77.0`, `0.5`, `1.0`, `2.0`,
+`0.8`, `0.2`, `0.1`, `0.6667`, `0.3333`, and a `CB[3][]`-indexed runtime scale.
 
 ## Cross-validated against a second file family: structure confirmed, not coincidental
 
@@ -439,9 +475,10 @@ This investigation has now produced a cross-validated (2 independent shader file
 of Stellar Forge's per-sample terrain evaluation:
 **grid-position setup (`cb4`) → per-corner integer hash (per-axis constants + seed from `cb2` + xxHash32-style
 avalanche using `XXH_PRIME32_5`) → `hash % 12` gradient selection from an extracted standard Perlin 12-vector table
-→ quartic Simplex falloff weighting → `DP3`/`DP4` combine across 4 corners → octave loop (data-driven count from
-`cb1[80]`, per-octave parameters from `cb1[]`) → polynomial remapping (constants `77.0`/`38.5`/`0.8`/`0.2`/etc.,
-purpose not fully confirmed) → two-field structured output record.**
+→ quartic Simplex falloff weighting → `DP3`/`DP4` combine across 4 corners (`*77.0` normalize, conditional `*2.0`
+amplitude correction for out-of-range excursions) → octave loop (data-driven count from `cb1[80]`, per-octave
+parameters from `cb1[]`) → final `*77.0`-normalized smoothstep (`3t²-2t³`) blended with a second, differently
+weighted smoothstep term, scaled by a `CB[3][]` runtime constant → two-field structured output record.**
 
 Every arrow in that chain is backed by extracted opcode/operand/constant evidence from the shipped binary, not
 inferred from names alone — this is the practical foundation an offline reimplementation would start from.
