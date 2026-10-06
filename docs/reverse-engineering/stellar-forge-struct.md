@@ -665,3 +665,34 @@ and the name itself ("make a star system ready") is a strong independent semanti
 purpose is ensuring `SystemAddress`-keyed Stellar Forge data is generated/cached before it's needed, consistent
 with every other finding in this file. It does not, on its own, close the `body_object+0x18` identity question,
 but it substantially increases confidence in the surrounding narrative.
+
+## Follow-up: the job names are registered via a reflection/type system, not plain debug strings
+
+Chased the references to the `"StarSystemMakeReadyJob"` and `"StellarForgeSimulation"` strings one step further.
+Both lead to tiny, near-identical functions (`0x14011a900` and `0x14011aa30`) of the shape:
+```asm
+LEA RDX, [string]          ; "StellarForgeSimulation" / "StarSystemMakeReadyJob"
+LEA RCX, [static_cache_slot]
+CALL FUN_1405d2d60         ; (cache_slot, name_string, 0) -- registers/constructs something named
+LEA RAX, [some_other_field]
+MOV [cache_slot], RAX
+JMP 0x144898d9c            ; shared tail/cleanup
+```
+This is a **named type/category registration** call (constructing a reflection descriptor by string name), not
+a plain debug-print or log string use — i.e. `StellarForgeSimulation` and `StarSystemMakeReadyJob` are genuine,
+first-class reflected type/category identifiers in whatever introspection system this engine uses (for
+save/debug tooling, data-driven job scheduling, or similar), not incidental.
+
+Four more tiny functions found alongside these (`0x14011a940`, `0x14011a970`, `0x14011a9a0`, `0x14011a9d0`) are
+**lazy-cached field-address accessors** — each does an init-guard check then returns `&(job_record_field)` for
+one specific slot in the job-descriptor record documented above (confirmed: their returned addresses, `0x14553c500`,
+`0x14553c4f0`, `0x14553c4e8`, `0x14553c4f8`, are exactly 4 of the 8 callback-pointer slots found earlier). This
+confirms the job-descriptor record is exposed to a generic reflection/property system by field, consistent with
+a data-driven job framework, but these are **type-level accessors** (return a slot's address, generically, not
+tied to any specific running instance) — they don't carry or reveal a runtime `SystemAddress`/key value.
+
+**Stopping point for this specific sub-thread:** this confirms the architecture (reflected job type, registered
+by name, with generically-accessible callback slots) but doesn't move the `body_object+0x18` identity question
+forward — that still needs either the adjustor-thunk-aware vtable trace or finding the actual *per-instance*
+job-scheduling call (which would take a real `SystemAddress`-like argument at the moment a specific system's
+"make ready" job is queued), neither of which this reflection-registration code path leads to.
