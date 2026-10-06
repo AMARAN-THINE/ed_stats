@@ -173,3 +173,6 @@ UI/economy category tag for the shipyard purchase flow, otherwise hashed-field p
 pattern, consistent with npccrew/initiative handlers documented above.
 
 `FUN_142da8ff0` (`elite/npc/kill`, 4,022 addresses) shows hashed-field pattern, no literal field names.
+
+`FUN_1420b1c30` (`elite/mission/cargodepot/collect`, 1,050 addresses) shows hashed-field pattern, consistent with
+other cargo/mission handlers.
