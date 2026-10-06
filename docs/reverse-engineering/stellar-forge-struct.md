@@ -33,11 +33,39 @@ every previous attempt this session (string xrefs, raw address scans, and the ex
 failed to find — found here not by searching for the algorithm, but by following the one real, unambiguous call
 chain from the already-confirmed seed *consumer* back to its producer.
 
-**What's still open:** whether `body_object+0x18` **is** the game's `SystemAddress`/`BodyID` value, or some other
-per-body 64-bit identifier (e.g. an internal pointer-derived or session-local ID) that merely correlates with it,
-has not yet been independently confirmed — that requires tracing where `body_object+0x18` itself is written, which
-this pass did not do. The hash function identification itself is solid (exact algorithmic match); the semantic
-claim "this IS the SystemAddress" is not yet proven and should be treated as the next concrete step, not fact.
+**UPDATE — now substantially confirmed via `GetStellarForgeBodyInfo`'s real implementation (`FUN_1429e8d30`),
+decompiled later in this same investigation (see the full section below for how it was found).** That function:
+```c
+if ((*(ulonglong *)(*(longlong *)(param_1 + 0x10) + 0x20) & 0x7fffffffffffff) !=
+    (*param_4 & 0x7fffffffffffff)) {
+    error("Cannot get stellarforge body info for a body from another system. "
+          "Requested body system: %llu Script System: %llu");
+    ...
+}
+(**(code**)(**(longlong**)(param_1+0x60) + 0x168))(...);           // resolve current level/world object
+FUN_143ce8660(local_200, &local_1f0, param_4);                     // THE SAME lookup/hash-table function
+// local_1f0 now has fields BodyType, StellarMass, Radius, SurfaceTemperature, SpectralClassification, Sequence
+```
+This explicitly: (a) validates that `param_4`'s low 55 bits match the **script's own `SystemAddress`**
+(`(param_1+0x10)+0x20`, the exact same field/mask already confirmed as real `SystemAddress` via the decompiled
+`GetSystemAddress` binding below), (b) then passes the **full, unmasked** `param_4` into `FUN_143ce8660` — the
+identical Wang-hash-based lookup function documented above — and (c) gets back an object with real per-body
+stellar fields (confirming the lookup returns one specific *body*, not a system container). This means:
+
+- `param_4` (the body ID argument a script passes to `GetStellarForgeBodyInfo`) is a **composite 64-bit key**:
+  low 55 bits = `SystemAddress`-equivalent (shared by all bodies in a system, which is exactly what the
+  same-system validation checks), high ~9 bits = a body-within-system discriminator.
+- This composite key is exactly what `FUN_143ce8660`'s Wang-hash table is keyed by — the same lookup
+  infrastructure reached from `FUN_1439168e0` (via `FUN_143cd0400`) for the terrain-seed builder.
+- `body_object+0x18` (the Wang-hash input for the `Seed` field) is therefore extremely likely this same
+  composite `SystemAddress`+body-index key, cached redundantly on the body object itself (explaining why
+  `FUN_1439168e0` re-hashes it — it's re-deriving the exact same hash already used to locate the object).
+
+**Remaining honest caveat:** this traces the *lookup key's* structure and confirms it's `SystemAddress`-rooted
+with high confidence; it does not independently re-verify that `body_object+0x18`'s bytes, read directly in
+`FUN_1439168e0`, are bit-identical to this composite key rather than some derived/re-encoded copy — that would
+need one more direct trace (confirm `body_object` in both call sites is the same object/offset), not done here.
+Treated as "substantially confirmed, one direct-identity trace short of airtight," not asserted as settled fact.
 
 **Supporting evidence found (same hash, reused as a hash-table bucket function):** `FUN_143ce8660`, the function
 that looks up the body object consumed by `FUN_1439168e0`, independently contains the **exact same** Wang hash
@@ -455,6 +483,24 @@ used as the search anchor.
 - Returns a key/value record with real field names found as literals: **`BodysiteID`**, **`ScenarioCSMState`**,
   **`SettlementDifficulty`**, **`ConflictZoneIntensity`**, **`IsThargoidDangerState`** (the last computed as
   `(enum_value - 0x22) < 3`, i.e. a 3-value enum range check, not a simple boolean flag read).
+
+## GetStellarForgeBodyInfo decompiled: capstone finding tying SystemAddress to the terrain-seed hash table
+
+Found the same way as the others: its Lua-table registration entry (`FUN_14078b4f0(&local_res8,
+"GetStellarForgeBodyInfo", &LAB_1429e8bc0, 0xffffffff)`) pointed at `0x1429e8bc0`, which turned out to be a
+`LAB_`-prefixed address: a real instruction with no `Function` object covering it (Ghidra's auto-analysis never
+created one there, for reasons not investigated). Forcing a function to be created at that address
+(`CreateFunctionCmd`) and decompiling it worked: it's a thin Lua-argument-marshalling wrapper (self object plus
+optional numeric arg plus optional bool arg) that immediately delegates to `FUN_1429e8d30`, the real ~800-instruction
+implementation. See the "Seed derivation located" section above for the finding itself (the same-system
+validation plus `FUN_143ce8660` lookup, confirming the lookup's composite key is SystemAddress-rooted).
+
+This pass also confirmed several more fields as live literals on the looked-up body object: `BodyType`,
+`StellarMass`, `Radius`, `SurfaceTemperature`, `SpectralClassification` (via a sub-lookup, `FUN_143c56d60`, keyed
+by a small integer field at `plVar9[0x89]`), and `Sequence` (the star's luminosity/evolutionary-sequence class,
+same sub-lookup pattern) -- real fields on the per-body object returned by the SystemAddress-rooted
+composite-key lookup, distinct from (and in addition to) the StellarForgeInput struct fields documented via the
+serializer earlier in this file.
 - This settlement-specific field set (`SettlementDifficulty`, `ConflictZoneIntensity`, `IsThargoidDangerState`)
   confirms "Bodysite" in this API is a **ground settlement on a planet's surface**, not the general celestial
   body/location object used elsewhere. This explains why it's a structurally separate accessor family from

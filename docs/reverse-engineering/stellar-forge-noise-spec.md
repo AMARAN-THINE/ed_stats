@@ -125,6 +125,9 @@ of the output record.
    would need far more register tracing than this pass did.
 2. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation is now substantially resolved — see
    `stellar-forge-struct.md`'s "Seed derivation located" section: the seed is a Thomas Wang 64-to-32 hash of a
-   64-bit body-object field, confirmed by an exact struct-offset match. What remains open is only whether that
-   64-bit field is literally `SystemAddress`/`BodyID` (two follow-up attempts to confirm this were inconclusive,
-   also documented there) — not the hash algorithm or its struct wiring, which are now confirmed.
+   64-bit body-object field, confirmed by an exact struct-offset match. A capstone finding via
+   `GetStellarForgeBodyInfo`'s real implementation confirmed the same hash-table lookup used to build the seed
+   is keyed by a composite 64-bit value whose low 55 bits are explicitly validated as `SystemAddress` (with the
+   remaining ~9 bits a body-within-system index) — so `Seed = WangHash64to32(SystemAddress | bodyIndex<<55)` is
+   now a well-evidenced, near-conclusive formula, one direct identity trace short of fully airtight (see
+   `stellar-forge-struct.md` for the exact remaining caveat).
