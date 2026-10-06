@@ -55,3 +55,19 @@ rather than built from this literal constant at runtime, and it does not rule ou
 reimplementation that happens to compute equivalent values through different instruction sequences without this
 exact immediate appearing. Within those limits, this is a genuine negative result, not an inconclusive one: the
 specific, verifiable signature this search looked for is absent from this binary.
+
+## Follow-up: the real function at the claimed "Wang hash" address
+
+`FUN_1437b1390` (the real function containing the external document's claimed `0x1437b13e0` Wang-hash address,
+11,905 addresses) was decompiled and read. It is **not** a Wang hash and **not** related to seed derivation at all.
+It's a **case-insensitive DJB2 string hash**: seed `0x1505` (5381 decimal, DJB2's well-known public-domain seed
+constant), case-folds each character (lowercasing via the same range-check-and-add-0x20 pattern seen elsewhere in
+this binary), and combines via `hash = hash * 0x21 + c` (`0x21` = 33, the exact DJB2 multiplier), unrolled
+per-character for at least the first several characters of the input string.
+
+This is a genuine, confirmed algorithm identification — just not the one claimed. It's almost certainly the
+generic case-insensitive **symbol/name hashing function** used throughout this codebase for resolving string
+identifiers (asset names, resource names, etc.) to hash table slots, consistent with the `UInt32ToStringHashMap`
+type and the hashed-field dispatch pattern documented extensively elsewhere in this repo (`codex-journal.md`,
+`network.md`) — this may well be (or be closely related to) the actual hash-dispatcher mechanism that was searched
+for and not found earlier in this investigation. Worth a follow-up pass tracing this function's callers.
