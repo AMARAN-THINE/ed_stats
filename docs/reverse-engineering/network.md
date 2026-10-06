@@ -189,3 +189,6 @@ other cargo/mission handlers.
 dispatcher `FUN_1424e4fe0`) shows hashed-field pattern, no literal field names.
 
 `FUN_142537b60` (`elite/ship/destroyed/vacant`, 2,720 addresses) shows hashed-field pattern, no literal field names.
+
+`FUN_141e7e3e0` (`elite/ship/refuel`/`elite/ship/repair`, 2,546 addresses) is single-constructor pattern and
+references `"StationContact"` — likely an internal tag identifying this as a station-service request category.
