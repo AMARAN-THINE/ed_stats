@@ -541,3 +541,23 @@ Nvidia variant) without needing proportionally more *distinct* logic — it's th
 different degrees, likely trading shader-compile-time loop overhead for runtime performance depending on target
 hardware/quality tier (consistent with separate Nvidia/plain/DP file variants documented earlier being different
 compilation strategies for the same underlying generator, not different generators).
+
+## Nvidia-variant largest permutation: different precision strategy, not just bigger
+
+Checked the largest `TerrainComputeShadersNvidia.csa` permutation (3,972,056-byte `SHEX` — far larger than the
+DP variant's largest at 601,824 bytes). The file is large enough that the disassembler's 100,000-instruction
+processing cap was hit before reaching the end; the findings below are from that **partial sample**, not the full
+shader — no reliable total instruction count is given here (an earlier back-of-envelope extrapolation attempt used
+an invalid method and is not reported).
+
+Within the first 100,000 instructions: dominated by **single-precision** `ADD` (70,085) and `MUL` (11,519) — no
+`DMUL`/`DADD` double-precision instructions seen, unlike the DP variant's largest permutation which was
+double-precision-dominated. Also shows **both** loops (14 `LOOP` blocks) and heavy branching (1,319 `IF` blocks) in
+this sample, unlike the DP variant's largest permutation which had zero loops (fully unrolled).
+
+**This is a real, distinct compilation strategy difference between the file variants**, not just a size difference:
+the `TerrainComputeShadersNvidia.csa` family appears to use single-precision math with runtime loops, while
+`TerrainComputeShadersDP.csa`'s largest permutation trades loops for double-precision unrolled branching. This is
+consistent with the file names/earlier documentation (Nvidia vs. double-precision vs. plain variants being different
+GPU-vendor/precision code paths for the same underlying generator) but adds a concrete instruction-level distinction
+between them beyond just file size.
