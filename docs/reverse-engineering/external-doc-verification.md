@@ -71,3 +71,18 @@ identifiers (asset names, resource names, etc.) to hash table slots, consistent 
 type and the hashed-field dispatch pattern documented extensively elsewhere in this repo (`codex-journal.md`,
 `network.md`) — this may well be (or be closely related to) the actual hash-dispatcher mechanism that was searched
 for and not found earlier in this investigation. Worth a follow-up pass tracing this function's callers.
+
+## DJB2 hash resolved: single use, not the broader dispatcher mechanism
+
+Traced the DJB2 function's only caller: `FUN_1437e28c0` (397 lines decompiled), a component-class registration
+function for a **combat/damage subsystem**, hashing component type names via DJB2 for what's presumably a factory
+or registry lookup. Named components registered here: `BasicDamageComponent`, `BasicRepairComponent`,
+`BuffDataManager`, `BuffHolderComponent`, `BuffReporterComponent`, `CausticDamageManager`, `DamageRegions`,
+`FriendlyFireDamageMitigator`, `GenericParamDamageResponder`, `SecondaryEffectReceiverComponent`.
+
+**This resolves the DJB2 thread, but not in the direction hoped**: it has exactly one caller, and that caller is a
+narrow, single-subsystem component registry (damage/combat components), not the broader status-file/REST-endpoint
+hashed-field dispatcher searched for (and not found) earlier in `codex-journal.md`/`network.md`. Same hashing
+*technique* (DJB2, case-insensitive), different and unrelated use site. The original hash-dispatcher search remains
+unresolved — this was a legitimate lead that turned out not to be the mechanism, documented honestly as such rather
+than left unexamined.
