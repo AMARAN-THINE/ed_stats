@@ -96,3 +96,13 @@ external document that was checked has failed verification against this binary â
 or (DJB2) a real but differently-purposed finding. The document should not be treated as a reliable source for any
 of its remaining unchecked claims (star synthesis, habitable-zone formulas, planetary struct layout) either, absent
 independent verification of each one.
+
+## Fourth claim checked: SystemAddress unpacker also false
+
+`FUN_1425911d0` (containing the claimed `0x142591570` SystemAddress bitfield-unpacker address, 6,158 addresses) is
+a generic indexed accessor: `param_2` is used purely as an array index (`param_1 + param_2*4 + 800`) and `param_3`
+as a plain compare-and-conditionally-store value â€” no bit-shifting, masking, or coordinate-transform arithmetic
+matching the claimed bitfield schema anywhere in it. This is the **fourth of four** checked claims in the external
+document to fail verification (MT19937, Wang hash, Park-Miller LCG, SystemAddress unpacker), with one incidental
+real finding (DJB2 hash, unrelated purpose) along the way. All four core PRNG/coordinate claims in the document are
+confirmed false against this binary; none should be relied on without independent re-verification.
