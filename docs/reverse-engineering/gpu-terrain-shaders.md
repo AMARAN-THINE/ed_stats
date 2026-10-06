@@ -574,3 +574,21 @@ within this 50,000-instruction window — only `cb1[0]`/`cb1[1]` accesses appear
 roughly an order of magnitude larger than the ones where `cb1[80]` was found, the octave-loop section likely sits
 further into the shader than this window reaches, rather than being genuinely absent. Not confirmed either way in
 this pass; stated as an open item rather than assumed.
+
+## Resolved: octave marker found — but buffer roles are reshuffled per compiled variant, not fixed register numbers
+
+Processing the full Nvidia-variant largest permutation (134,508 instructions, confirmed complete — not truncated)
+resolves the open item above. Key correction: **constant-buffer register numbers are not consistent across
+compiled variants.** This file's declarations are `cb0`=1, `cb1`=**1** (not 81!), `cb2`=**87** (not 1), `cb3`=23,
+`cb4`=6 — the large per-planet parameter block that was `cb1` (size 81) in the smaller DP/plain-variant kernels is
+**`cb2`** (size 87) here. Searching `cb2` for the octave pattern instead of `cb1` finds it immediately:
+`IEQ ... CB[2][86]` (instruction 366939) — the same structural role (compare loop counter to a value read from near
+the end of the large parameter buffer) as `CB[1][80]` in the other files, just relocated.
+
+**This fully confirms** the octave-loop structure (and, combined with the earlier-confirmed hash constant and
+4-corner loop bound) generalizes across all three shader files checked this session. The earlier "inconclusive"
+status on the octave marker is resolved: it was present all along, just under a different buffer slot. **Practical
+implication for any reimplementation**: buffer *role* (seed / large parameter block / dispatch-grid params) must be
+identified per compiled permutation by its declared size and access pattern, not assumed to sit at a fixed register
+number — the compiler evidently reassigns slots per variant (likely based on which resources/samplers each specific
+permutation also declares, shifting subsequent register allocation).
