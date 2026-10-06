@@ -495,3 +495,20 @@ parameter cluster) and **`cb1[80]`** (octave count) — clean and self-consisten
 Re-verified the second file's (`TerrainComputeShaders.csa`) earlier cross-validation data against the fixed decoder:
 the `374761393` hash-constant count (20) is unchanged, and its `CB[1][81]` also appears exactly once, correctly as
 the declaration size. The earlier cross-validation findings stand, unaffected by the bug.
+
+## Medium permutation checked: same `cb1` range, more code — feature selection is likely data-driven, not index-driven
+
+Checked a medium-sized `TerrainComputeShadersDP.csa` permutation (416,384 byte offset, 1,712 decoded instruction
+lines — roughly 2x the smallest kernel's instruction count). Its `cb1` access range is **identical**: only indices
+`10–16` and `80`, same as the smallest permutation, despite substantially more code overall.
+
+This is a meaningful structural finding: the additional code in larger permutations is not reading a wider slice of
+the per-planet parameter buffer — it's doing more computation (additional math/branches) with the **same** small set
+of `cb1` indices. This suggests one of two things (not distinguished in this pass): (a) different terrain feature
+types (basins, mountains, craters, etc. from `stellar-forge-struct.md`) are selected by different **runtime values**
+written into these same `cb1` slots by the CPU per-dispatch, with the shader itself staying feature-agnostic and
+driven by data rather than code branches, or (b) feature-type differentiation happens via choosing a different
+**compiled permutation** entirely (matching the 10-permutation structure already documented), each permutation
+hard-coding a specific feature combination's math, rather than via runtime data in a single general-purpose shader.
+Both are plausible from current evidence; resolving which (or whether it's some mix) needs comparing the full
+instruction-level *logic* between permutations, not just their `cb1` access ranges — not attempted in this pass.
