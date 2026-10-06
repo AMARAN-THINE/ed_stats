@@ -38,3 +38,20 @@ public algorithms they claim to represent. It should be treated as unverified/in
 confirmed facts about this binary, regardless of its original provenance. The one usable side-effect of checking it
 was discovering a sixth noise-module type name, `RidgedMultifractalModule`, which has been folded into
 `stellar-forge.md`'s module-type list.
+
+## Follow-up: full-binary search for the MT19937 matrix constant
+
+Per a plausible alternative explanation offered (the game has been patched since the external document's addresses
+were found, so the addresses moved but the algorithm could still exist elsewhere in this build), the whole binary
+was searched for MT19937's matrix constant `0x9908B0DF` — a value fixed by the algorithm's 1998 specification, not
+tied to any particular compiled address or game version.
+
+**Result: zero occurrences across all 19,730,383 instructions in this binary** (a complete scan, not a partial
+sample — confirmed by the scanned-count matching the binary's total instruction count exactly).
+
+**What this does and doesn't show**: this rules out the constant appearing as an immediate value in any instruction
+operand. It does **not** rule out MT19937 existing via a precomputed state table loaded from `.rdata`/a data section
+rather than built from this literal constant at runtime, and it does not rule out a from-scratch MT19937
+reimplementation that happens to compute equivalent values through different instruction sequences without this
+exact immediate appearing. Within those limits, this is a genuine negative result, not an inconclusive one: the
+specific, verifiable signature this search looked for is absent from this binary.
