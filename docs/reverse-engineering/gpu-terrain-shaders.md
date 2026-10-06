@@ -524,3 +524,20 @@ simply more complex math on the same single evaluation. This is consistent with,
 each terrain feature type from `stellar-forge-struct.md` contributes its own loop pass, layered additively, with the
 compiled permutation choosing *how many* feature passes to include (hence the large size range across the 10
 permutations) rather than *which* parameter slots to read.
+
+## Largest permutation checked: fully unrolled, double-precision-heavy, zero loops
+
+Checked the largest `TerrainComputeShadersDP.csa` permutation (601,824-byte `SHEX`, 22,076 instructions). Structural
+opcode histogram: **zero `LOOP` constructs** (vs. 2 in the smallest, 6 in the medium permutation) but **557
+`IF`/`ENDIF`/531 `ELSE` blocks** — the opposite trade-off from what the medium-permutation comparison predicted.
+Dominated by double-precision arithmetic: `DMUL` (4,850), `DADD` (4,382), `FTOD`/`DTOF` conversions (1,803/609),
+`DDIV` (579).
+
+**Interpretation**: rather than more runtime loop iterations, the largest permutation appears to be **compile-time
+unrolled** — whatever loops the smaller permutations execute at runtime (octave summation, feature passes) are
+baked out into straight-line repeated code with heavy conditional branching for edge cases, in this variant. This
+explains the dramatic size range across the 10 permutations (27KB to 600KB+ in this file alone, up to ~6MB in the
+Nvidia variant) without needing proportionally more *distinct* logic — it's the same algorithm family, unrolled to
+different degrees, likely trading shader-compile-time loop overhead for runtime performance depending on target
+hardware/quality tier (consistent with separate Nvidia/plain/DP file variants documented earlier being different
+compilation strategies for the same underlying generator, not different generators).
