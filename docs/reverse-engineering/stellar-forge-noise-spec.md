@@ -109,9 +109,22 @@ A single double-precision value (height), written as two 32-bit halves to a stru
 of the output record.
 
 ## What's needed to go further
-1. Apply this same tracing to the large (~200K-instruction) permutations to find per-planet-class branches (basin,
-   mountain, crater features documented in `stellar-forge-struct.md` presumably select different code paths or
-   parameter sets not present in this smallest/simplest permutation).
-2. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation remains unlocated (see `codex-journal.md`/
-   `stellar-forge-struct.md` for the dead-end log) — without it, this spec can evaluate noise for an arbitrary seed,
-   but not derive the correct seed for a given real system.
+1. ~~Apply this same tracing to the large permutations to find per-planet-class branches~~ — **attempted,
+   inconclusive but informative.** Scanned the large Nvidia-variant permutation's full operand-decoded output
+   (`terrain_nv_operands_full3.txt`, 1,794 `IF`/`ENDIF` pairs) for comparisons feeding branch conditions. Every one
+   found is a comparison between `TEMP` registers (intermediate, computed values) and small integer literals
+   (`0`, `1.0`), never a direct `CB[n][m]` constant-buffer read. This is the opposite shape of what a discrete
+   "planet class selector" branch would look like (which would compare directly against a class/feature-flag
+   constant from the per-planet parameter buffer). The more likely explanation, consistent with this file already
+   containing multiple separately-compiled DXBC chunks of wildly different sizes (28KB to 5.9MB, documented in
+   `gpu-terrain-shaders.md`), is that **planet-class/feature specialization happens via CPU-side shader-variant
+   selection** (dispatching a different compiled permutation entirely) rather than via internal runtime branches
+   in one shader — the 1,794 `IF`s observed are far more likely numerical edge-case handling from aggressive loop
+   unrolling (e.g. degenerate corner cases, divide-by-zero guards) than class dispatch. Not proven, but this is
+   the evidence-backed working hypothesis; a full per-branch trace to rule out any class-selector shape entirely
+   would need far more register tracing than this pass did.
+2. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation is now substantially resolved — see
+   `stellar-forge-struct.md`'s "Seed derivation located" section: the seed is a Thomas Wang 64-to-32 hash of a
+   64-bit body-object field, confirmed by an exact struct-offset match. What remains open is only whether that
+   64-bit field is literally `SystemAddress`/`BodyID` (two follow-up attempts to confirm this were inconclusive,
+   also documented there) — not the hash algorithm or its struct wiring, which are now confirmed.
