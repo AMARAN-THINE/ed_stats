@@ -182,3 +182,5 @@ other cargo/mission handlers.
 `FUN_141d9ee20` (`elite/comms/join`, 5,195 addresses) shows hashed-field pattern, no literal field names.
 
 `FUN_1421fb550` (`elite/wing/info`, 210 addresses) shows hashed-field pattern, no literal field names.
+
+`FUN_143778020` (`elite/ship/scan`, 4,009 addresses) shows hashed-field pattern, no literal field names.
