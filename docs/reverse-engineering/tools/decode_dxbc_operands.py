@@ -30,7 +30,7 @@ def decode_operand(dwords, pos):
         imm = dwords[p:p+n]; p+=n
     return {'type':TYPES.get(otype,'T%d'%otype),'numcomp':numcomp,'indices':indices,'imm':imm}, p
 
-def disasm_with_operands(shex, max_instr=2000):
+def disasm_with_operands(shex, max_instr=150000):
     ver, = struct.unpack('<I', shex[0:4])
     total_dwords, = struct.unpack('<I', shex[4:8])
     dwords = struct.unpack('<%dI'%total_dwords, shex[:total_dwords*4])
@@ -42,7 +42,7 @@ def disasm_with_operands(shex, max_instr=2000):
         length = (token>>24)&0x7F
         mnem = OPCODES.get(opcode,'OP_%d'%opcode)
         if length==0:
-            if opcode==0x33:
+            if opcode==0x35:
                 length = max(dwords[pos+1],2)
             else:
                 length=1
