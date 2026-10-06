@@ -67,6 +67,15 @@ down whether `body_object+0x18` is literally `SystemAddress`/`BodyID`:
    `"ApproachBody,LeaveBody,StarSystem,..."` header constant, gated behind a debug-export flag), not the function
    that reads the live field values. It doesn't contain the offset information needed.
 
+**One suggestive (not conclusive) data point found along the way:** a different caller of the same lookup
+infrastructure, `FUN_143ce8740`, masks its 64-bit key to its low 55 bits (`key & 0x7fffffffffffff`) before a
+*separate* shard lookup (`FUN_143cea1e0`), then — only if that shard resolves and a type-tag check passes — calls
+`FUN_143ce8660` again with the **original, unmasked** key against that shard's own table. This is a two-level
+sharded-cache shape (top 9 bits select a shard/region, bottom 55 bits are the in-shard key), which is at least
+consistent with a packed spatial identifier in the `SystemAddress` family (sharding a cache by galaxy
+region/sector is a natural design). This is a different call site than the one feeding `FUN_1439168e0`, so it
+does **not** directly confirm what `body_object+0x18` holds — it's offered only as suggestive context for the
+hypothesis, not as evidence for this specific field.
 Neither angle resolved it. The semantic identity of `body_object+0x18` remains **unconfirmed** — treated as an
 open question, not fact, consistent with the caveat above. Further progress would need either locating the
 sibling function that actually serializes `SystemAddress`/`BodyID` with live values (not just the header) for a
