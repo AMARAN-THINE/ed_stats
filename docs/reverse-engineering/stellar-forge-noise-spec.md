@@ -17,10 +17,13 @@ cellIndex      = dispatchThreadID + cb0[0]
 worldPos       = float(gridX, gridY) * cb4.zw + cb4.y
 ```
 
-## 2. Per-corner hash — Confirmed
-For each of 4 corners (loop bound `counter >= 4`), given integer axis coordinate `c` and seed `s = cb2[0]`:
+## 2. Per-corner hash — Confirmed, including AXIS_CONST resolution
+For each of 4 corners (loop bound `counter >= 4`), given an integer 2-component coordinate `(cx, cy)` and seed
+`s = cb2[0]`:
 ```
-h = c * AXIS_CONST[axis]            // AXIS_CONST ∈ {3635633, 15452791}, Probable: per-axis, not fully enumerated
+(hx, hy) = (cx, cy) * (3635633, 15452791)   // single SIMD IMUL, both constants applied as two lanes of one
+                                              // vector op — not two separately-selected per-axis constants
+h = hx + hy                                  // IADD combines both lanes into scalar h
 h = h * 11710013 + h
 h = s  * 13953839 + h
 h ^= h >> 15
@@ -29,6 +32,11 @@ h ^= h >> 13
 // second avalanche pass (same shape) observed chained — Probable: full xxHash32 round, not independently verified
 gradientIndex = h % 12
 ```
+**`AXIS_CONST` resolved:** there is no missing third axis constant. The `IMUL` instruction producing this hash
+input uses a single 4-component immediate `(3635633, 15452791, 0, 0)` applied in one op to a 2-component integer
+coordinate — consistent with step 1's grid setup, which is already `(gridX, gridY)` only. This confirms the
+lattice this kernel evaluates is genuinely 2D (a heightfield), not a 3D volumetric noise field; a third axis
+constant was never missing, it simply doesn't exist for this kernel.
 
 ## 3. Gradient table — Confirmed, extracted directly from shader ICB data
 ```
@@ -101,14 +109,9 @@ A single double-precision value (height), written as two 32-bit halves to a stru
 of the output record.
 
 ## What's needed to go further
-1. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — only 2 constants (`3635633`, `15452791`) were
-   found directly; a search for a third distinct per-axis constant this session instead found `30798437` recurring
-   identically across multiple hash computations (so it's a general finalization-round constant, not axis-specific)
-   and `3184315597` used in an unrelated threshold comparison (`CB[1][12]`) with nothing to do with the hash. The
-   third axis constant, if one exists, was not found.
-2. Apply this same tracing to the large (~200K-instruction) permutations to find per-planet-class branches (basin,
+1. Apply this same tracing to the large (~200K-instruction) permutations to find per-planet-class branches (basin,
    mountain, crater features documented in `stellar-forge-struct.md` presumably select different code paths or
    parameter sets not present in this smallest/simplest permutation).
-3. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation remains unlocated (see `codex-journal.md`/
+2. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation remains unlocated (see `codex-journal.md`/
    `stellar-forge-struct.md` for the dead-end log) — without it, this spec can evaluate noise for an arbitrary seed,
    but not derive the correct seed for a given real system.
