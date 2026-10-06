@@ -491,3 +491,7 @@ After the fix, **`CB[1][81]` appears exactly once** — correctly, as the buffer
 session's flagged "CB[1][81] out-of-bounds access" was entirely an artifact of the now-fixed bug, not a real
 anomaly. The confirmed real `cb1` access range in the kernel body is **`cb1[10..16]`** (the threshold-comparison
 parameter cluster) and **`cb1[80]`** (octave count) — clean and self-consistent with the declared 81-element size.
+
+Re-verified the second file's (`TerrainComputeShaders.csa`) earlier cross-validation data against the fixed decoder:
+the `374761393` hash-constant count (20) is unchanged, and its `CB[1][81]` also appears exactly once, correctly as
+the declaration size. The earlier cross-validation findings stand, unaffected by the bug.
