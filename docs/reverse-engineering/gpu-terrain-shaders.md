@@ -478,3 +478,16 @@ with ~20 empty/malformed operands) near the start of the instruction stream, whi
 `tools/decode_dxbc_operands.py`, not a real shader instruction, and is explicitly **not** reported as a finding.
 The decoder has at least one remaining edge-case bug (likely in extended-operand-token handling) that should be
 fixed before trusting any single anomalous-looking operand decode near a `CUSTOMDATA`/declaration boundary.
+
+## Decoder bug fixed; `cb1[81]` anomaly resolved as a false alarm
+
+Found and fixed the actual bug: an earlier `sed` fix for the `CUSTOMDATA` opcode only matched `opcode == 0x33`
+(with spaces) and silently missed `operand_decode.py`'s `opcode==0x33` (no spaces), so that file still had the bug
+while `disasm_dxbc.py` didn't — a reminder that the two tools' fixes weren't actually verified independently before.
+Fixed now (`tools/decode_dxbc_operands.py`).
+
+After the fix, **`CB[1][81]` appears exactly once** — correctly, as the buffer's declared size field itself
+(`DCL_CONSTANT_BUFFER CB[1][81]`, confirming 81 elements, valid indices 0–80) — not as a body access. The previous
+session's flagged "CB[1][81] out-of-bounds access" was entirely an artifact of the now-fixed bug, not a real
+anomaly. The confirmed real `cb1` access range in the kernel body is **`cb1[10..16]`** (the threshold-comparison
+parameter cluster) and **`cb1[80]`** (octave count) — clean and self-consistent with the declared 81-element size.
