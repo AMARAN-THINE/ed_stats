@@ -112,6 +112,37 @@ and the terrain-seed's `body_object+0x18` field are the same value, the same obj
 objects in the same location hierarchy. Tracing that connection (what object is `lVar1`, and is it reachable from
 or identical to the body object `FUN_1439168e0` operates on) is the next concrete step, not yet done here.
 
+**`GetBodysiteID` (the named `BodyID` Lua accessor) decompiled too, confirming it shares the same "self" object:**
+found the same way, via its registration in `FUN_1429d5990` (`FUN_14078b4f0(&local_res8, "GetBodysiteID",
+FUN_1429e5240, 0xffffffff)`), real implementation `FUN_1429e5240`:
+```c
+lVar3 = *FUN_140792670(param_1, 1);                      // same "self" resolution as GetSystemAddress
+if (*(longlong *)(*(longlong *)(lVar3 + 0x10) + 0xc0) == -1) {
+    FUN_140787440(local_res8, *(undefined8 *)(*(longlong *)(lVar3 + 8) + 0x10));   // BodyID value
+} else {
+    FUN_1407873f0();   // different/invalid-state path, not traced further
+}
+```
+This confirms `GetSystemAddress` and `GetBodysiteID` both operate on the **same Lua "self" object** (`lVar3`/
+`lVar6` are the same resolve), just reading different sub-pointers off it: `SystemAddress` comes from the
+sub-object at `+0x10` (field `+0x20`, mask-gated), `BodyID` from the sub-object at `+8` (field `+0x10`,
+gated by a *different* sentinel check — `subobject(+0x10)+0xc0 == -1` — on the first sub-object, not the second).
+So `SystemAddress` and `BodyID` live on two different sub-objects hanging off the same parent, which is a
+sensible "location" object shape (e.g. a `StarSystem` pointer and a `Body` pointer bundled together).
+
+`FUN_1408beea0` (the flag check gating `SystemAddress`'s masked path) was also decompiled: it is **not**
+SystemAddress-specific. It's a generic coordinate/position-validity check — testing roughly a dozen `double`
+fields (at various offsets on its argument) against a NaN-like sentinel bit pattern (`value | 0x800fffffffffffff
+!= 0xffffffffffffffff`), consistent with validating a 3D position (or several nested positions) hasn't been
+resolved/is sentinel-valued yet. This means the earlier "flag check" framing was imprecise: what gates whether
+`GetSystemAddress` returns the masked value is really "has this location's position data been resolved," not a
+SystemAddress-specific flag bit.
+
+None of this closes the original `body_object+0x18` question, but it now gives verified, by-name-confirmed struct
+offsets for where real `SystemAddress` (`subobject+0x20`) and `BodyID` (`subobject+0x10`) values live on the Lua
+location-binding object — useful ground truth for comparing against `body_object` in `FUN_1439168e0` if that
+object's own constructor/type is identified in a future pass.
+
 `FUN_1439d7f30` (`0x1439d7f30`, 4,802-address function) is a **serializer**: it walks a fixed in-memory struct
 (`param_1`, a pointer treated as `undefined4*`, so offsets below are in 4-byte units unless noted) and writes each
 field out under its string name via `FUN_1439da630` (float field) / `FUN_1439da8e0` (bool field) into a key/value
