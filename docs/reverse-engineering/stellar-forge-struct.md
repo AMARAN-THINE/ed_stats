@@ -524,3 +524,26 @@ serializer earlier in this file.
   settlement-ID lookup, likely unrelated to the terrain-seed's `body_object` in `FUN_1439168e0` (which is about
   planetary terrain generation, not settlement placement) — a useful negative result narrowing the search rather
   than a positive link.
+
+## A second, distinct tagged variable-width masking scheme found nearby (separate from the SystemAddress mask)
+
+Checking the handful of functions in the same address neighborhood as the Wang-hash lookup (`0x143ce8000`–
+`0x143cea000`, only 8 functions total) for anything else relevant, `FUN_143ce8800` turned up a **different**
+masking scheme from the constant `& 0x7fffffffffffff` (55-bit) mask already confirmed for `SystemAddress`:
+```c
+local_res8[0] = (1L << (((byte)param_2 & 7) * -3 + 0x2c & 0x3f)) - 1U & param_2;
+```
+This derives a **variable** bit-width mask from `param_2`'s own low 3 bits (a 0–7 tag value), then masks `param_2`
+down to that many low bits. The widths for tag values 0–7 work out to **44, 41, 38, 35, 32, 29, 26, 23 bits**
+(each 3 less than the last) — a tagged/categorized ID scheme where 3 low bits select a category and the
+remaining bits (shrinking by 3 per category) hold an index, feeding a **two-level nested hash-map lookup**: the
+masked value is Wang-hashed into a first table (`param_1+0x40`/`+0x48`) to get a sub-table `lVar3`, then the
+**original, unmasked** `param_2` is Wang-hashed again into that sub-table (`lVar3+0x10`/`+0x18`) to get the final
+value via `FUN_1405c0c00`.
+
+**This is explicitly flagged as a separate, not-yet-connected finding** — it's structurally similar (same Wang
+hash, same two-level nested-table shape as the `SystemAddress`-rooted lookup documented above) but uses a
+different masking formula entirely, so it should not be assumed to be the same ID namespace as `SystemAddress`/
+`BodyID` without further tracing of what calls `FUN_143ce8800` and what `param_2` represents there. Recorded here
+as a real, verified algorithm (the shifting-width tag scheme is unambiguous from the decompiled constants) for
+future reference, not folded into the `SystemAddress` conclusions above.
