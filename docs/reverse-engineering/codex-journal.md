@@ -479,6 +479,26 @@ hit dead ends. The mechanism remains real (confirmed by its effects — zero str
 unlocated; further progress would need a different method, such as dynamic analysis/tracing, which is out of scope
 for static analysis of this executable alone.
 
+### Fourth attempt: checked whether it's (more occurrences of) the engine's Wang hash — inconclusive due to noise
+
+After separately confirming (in `stellar-forge-struct.md`) that this binary has a genuine, reused Thomas Wang
+64-to-32 integer hash as a general-purpose utility (4 confirmed call-chain-traced occurrences: the terrain seed,
+a generic ID-keyed hash-table bucket function, the default Lua RNG seed, and a second masking-variant lookup),
+it was worth checking whether the `Market.json`/hashed-field dispatcher is *also* this same hash. Two Ghidra
+instruction-level scans were run against the whole binary (19,730,383 instructions): a loose one (any
+`IMUL`/`MUL` by `0x15` near one by `0x41`, within a 12-instruction window) returned **1,431 hits across 1,120
+distinct functions**; a tightened one additionally requiring a `SHR`/`USHR` by `0x1f` (31) immediately before
+the first multiply and a `SHR`/`USHR` by `0xb` (11) between the two multiplies — matching the *exact* shift
+amounts in the confirmed real occurrences — still returned **1,429 hits**, barely fewer. This means `>>31` and
+`>>11` are themselves far too common in ordinary, unrelated bit-manipulation code (sign-bit extraction, generic
+shift tricks) at this binary's scale to serve as a useful fingerprint; this pattern-matching approach cannot
+distinguish genuine Wang-hash call sites from coincidental surrounding code without reviewing all ~1,400
+candidates individually, which wasn't done. **This neither confirms nor rules out** the `Market.json` dispatcher
+being Wang-hash-based — it's a genuine dead end for this specific method, not a negative finding about the
+dispatcher itself. The one method that has reliably found every confirmed Wang-hash site so far in this
+investigation is call-chain tracing from a known consumer/producer, not generic instruction-pattern search; that
+remains the only promising avenue for a fourth attempt, not binary-wide pattern scanning.
+
 ## Legacy exploration-data and carrier trade order schemas
 
 | Event | Fields |
