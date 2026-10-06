@@ -437,7 +437,28 @@ the same pattern already seen for `"Failed to find IStellarForge"` in `network.m
 a general convention in this codebase's scripting/interface-lookup layer: when a script or system requests an
 interface (`IStellarForge`, `ILocationInformation`, etc.) that isn't available on the current object, the error
 message embeds the literal interface name. `GetBodysiteInfo`/`GetBodysiteID` (referenced only from the 49-function
-Lua API table documented earlier) still have no separate dedicated implementation locatable by string xref — this
-remains a dead end for finding their actual logic; the Lua API table is a dispatch table whose targets are resolved
-through a different, not-yet-found mechanism (consistent with the hash-dispatcher dead ends recorded elsewhere in
-this doc set).
+Lua API table documented earlier) had no separate dedicated implementation locatable by string xref *at the time
+this note was written* — **superseded below**: a later pass found the Lua API table's registration site directly
+(`FUN_1429d5990`, the master binding function, found via the xref to the `"GetSystemAddress"` name string) and
+decompiled `GetBodysiteID`'s real implementation (`FUN_1429e5240`) along with `GetSystemAddress`'s
+(`FUN_1429eacb0`) — see the "Seed derivation located" section near the top of this file for both. The earlier
+"dead end" framing was about not having found the registration mechanism yet, not about the functions being
+permanently unlocatable; they were locatable once the actual registration call (not an error-tag string) was
+used as the search anchor.
+
+**`GetBodysiteInfo` decompiled too — reveals "Bodysite" means ground settlement, not generic celestial body.**
+`FUN_1429e52f0` (the registered implementation) delegates straight to `FUN_1429e5380`, which:
+- Confirms `*(longlong*)(*(longlong*)(param_1+0x10)+0xc0)` (the same sentinel field gating `GetBodysiteID`'s
+  path) **is** the `BodyID` value itself, not just a validity flag — it's passed directly as a lookup key
+  (`FUN_1429e08f0(lVar5, local_68, local_res18)`, `local_res18[0] = that field`) into what looks like a
+  ground-settlement data cache (`lVar5 = lVar7 + 0xb8`, off a "current level/world" object).
+- Returns a key/value record with real field names found as literals: **`BodysiteID`**, **`ScenarioCSMState`**,
+  **`SettlementDifficulty`**, **`ConflictZoneIntensity`**, **`IsThargoidDangerState`** (the last computed as
+  `(enum_value - 0x22) < 3`, i.e. a 3-value enum range check, not a simple boolean flag read).
+- This settlement-specific field set (`SettlementDifficulty`, `ConflictZoneIntensity`, `IsThargoidDangerState`)
+  confirms "Bodysite" in this API is a **ground settlement on a planet's surface**, not the general celestial
+  body/location object used elsewhere. This explains why it's a structurally separate accessor family from
+  `GetSystemAddress`/`GetStarSystemInfo` despite superficially similar names, and means `GetBodysiteID` is a
+  settlement-ID lookup, likely unrelated to the terrain-seed's `body_object` in `FUN_1439168e0` (which is about
+  planetary terrain generation, not settlement placement) — a useful negative result narrowing the search rather
+  than a positive link.
