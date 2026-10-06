@@ -548,27 +548,25 @@ different masking formula entirely, so it should not be assumed to be the same I
 as a real, verified algorithm (the shifting-width tag scheme is unambiguous from the decompiled constants) for
 future reference, not folded into the `SystemAddress` conclusions above.
 
-## Both remaining identity-trace attempts dead-end on the same obstacle: virtual dispatch, no RTTI
+## Both remaining identity-trace attempts initially looked dead-ended; one was re-opened and resolved (see below)
 
 Two follow-ups were tried to close the last gaps (confirming `body_object+0x18`'s identity, and identifying
 `FUN_143ce8800`'s `param_2`):
 1. Looked for direct callers of `FUN_143cd0400` (the async task whose `Update`-style method builds the terrain
-   seed) to find where the task — and its key field at `+0x78` — gets constructed/queued. All references found
-   are **data references from vtables**, not call instructions: this function is a virtual method, invoked only
-   through indirect/polymorphic dispatch, so there is no direct call site to trace back to a constructor this way.
-2. The same pattern repeats for `FUN_143ce8800`: its only references are two more data/vtable entries, confirming
-   it's also a virtual method (likely shared, inherited, unoverridden behavior across multiple otherwise-distinct
-   subclasses, which is why multiple unrelated vtable slots point at the same implementation).
+   seed) to find where the task — and its key field at `+0x78` — gets constructed/queued. Of its 4 references,
+   3 are this function's own `.pdata`/`.rdata` exception-unwind metadata (`UNWIND_INFO`/
+   `_IMAGE_RUNTIME_FUNCTION_ENTRY` — present for *every* function, not a sign of virtual dispatch; an earlier
+   pass of this file wrongly called all 4 "vtable data references," which this corrects). **The 4th reference,
+   `0x143ccdd02`, is a genuine direct `CALL` instruction** — re-examined below, where it led somewhere real.
+2. The same pattern repeats for `FUN_143ce8800`: both its references also turned out, on the same re-check, to
+   be plain `.pdata`/`.text`-call-site noise rather than confirmed vtable slots — not re-investigated further in
+   this pass, since the `FUN_143cd0400` thread already proved more productive.
 
-Both dead-end on the same underlying obstacle: this binary's RTTI is almost entirely stripped (only ~24 RTTI
-structures exist in the whole binary, found and checked in an earlier pass — none matching these classes), so
-there's no practical way to enumerate "which vtables point here" or reconstruct the owning class's layout without
-a full manual data-segment sweep for vtable arrays (scanning for contiguous runs of code pointers and
-cross-checking each slot) — a substantially larger undertaking than this pass, and a reasonable stopping point
-for this specific sub-investigation. The `SystemAddress`-rooted seed-derivation conclusion stands as
-"substantially confirmed" (per the capstone `GetStellarForgeBodyInfo` finding above); full bit-for-bit identity
-of `body_object+0x18` remains the one open item, now understood to require vtable/RTTI reconstruction work
-rather than more call-chain tracing to close.
+Point 1 was re-opened: see "Capstone naming discovery" below for where the genuine call site led. It gave the
+whole task chain a concrete name but did not, on its own, close the `body_object+0x18` bit-identity question —
+that specific gap is still open, and would need either tracing this job's registration-time construction of its
+state object, or the vtable/RTTI reconstruction route (infrastructure for which — `scan_vtable_slots.py`,
+`find_vtable_refs.py`, `find_vtable_refs_movimm.py` — now exists in `tools/` either way).
 
 ## Wang hash confirmed as the engine's general-purpose default integer hash: found a 4th occurrence
 
@@ -631,3 +629,39 @@ question produced a real negative result rather than the hoped-for positive iden
 useful (it correctly characterizes what kind of construction pattern to look for next, rather than a dead-end
 guess) but does not close the `body_object+0x18` identity question. That question is now understood precisely:
 it needs multiple-inheritance/adjustor-thunk-aware tracing, not a bigger version of the same byte-scan.
+
+## Capstone naming discovery: the whole task chain is the engine's "StarSystemMakeReadyJob"
+
+While re-examining `FUN_143cd0400`'s references, one of the four was re-checked more carefully and turned out to
+be a genuine direct `CALL` instruction (`0x143ccdd02`), not more exception-unwind noise like the other three
+(`.pdata`/`.rdata` `UNWIND_INFO`/`_IMAGE_RUNTIME_FUNCTION_ENTRY` structures every function has — a correction to
+the earlier "virtual dispatch only" framing). Forcing a function at the containing code (`0x143ccdcf0`, found by
+walking backward through the instruction stream to the nearest `RET`/prologue boundary) and decompiling it:
+```c
+void FUN_143ccdcf0(undefined8 param_1, undefined8 param_2, undefined4 param_3)
+{
+    undefined4 auStackX_18[4];
+    auStackX_18[0] = param_3;
+    FUN_143cd0400(param_2, auStackX_18);   // confirms FUN_143cd0400 takes 2 args, not 1 as first inferred
+}
+```
+This wrapper's own address (`0x143ccdcf0`) is itself stored in `.rdata` at `0x14553c4f0` — and walking the slots
+around *that* address (via `scan_vtable_slots.py`) revealed it's **not a vtable at all**, but a clean
+**job-descriptor record**:
+```
+[-4..+8]   9 small integers (0x40, 0x0, 0x8, 0x8, 0xa, -0x28, -0x28, -0x28, 0x8, 0x8, -0x7d, -0x7d, 0x10)
+             -- plausibly per-job field offsets/sizes, not traced further
+[+9..+16]  8 function-pointer callback slots, including this wrapper (FUN_143ccdcf0) and FUN_143ccdd50
+[+17]      string "StarSystemMakeReadyJob"
+[+20]      string "StellarForgeSimulation"
+[+23]      0x49064700  -- plausibly a precomputed name hash for fast registry lookup, not independently verified
+[+24..]    the next job record's own 8 callback pointers begin
+```
+**The entire task/state-machine chain this session traced from the `Seed` struct field all the way back through
+`FUN_1439d7f30` → `FUN_143cd0400` is a registered engine job literally named `StarSystemMakeReadyJob`, filed
+under the subsystem/category name `StellarForgeSimulation`.** This gives a concrete, human-readable identity to
+what had only been described functionally ("an async task that builds and serializes `StellarForgeInput`") —
+and the name itself ("make a star system ready") is a strong independent semantic confirmation that this job's
+purpose is ensuring `SystemAddress`-keyed Stellar Forge data is generated/cached before it's needed, consistent
+with every other finding in this file. It does not, on its own, close the `body_object+0x18` identity question,
+but it substantially increases confidence in the surrounding narrative.
