@@ -67,6 +67,22 @@ with high confidence; it does not independently re-verify that `body_object+0x18
 need one more direct trace (confirm `body_object` in both call sites is the same object/offset), not done here.
 Treated as "substantially confirmed, one direct-identity trace short of airtight," not asserted as settled fact.
 
+**One more direct trace completed on the *key's source side* (not the body-object side):** disassembled
+`FUN_143cd0400`'s actual call to `FUN_143ce8660` at the machine-instruction level (the decompiled C had silently
+dropped the 3rd argument). The call sets up `RCX` = the hash-table object and `RDX` = the output pointer
+immediately before the `CALL`, but the 3rd argument register (`R8`, the key pointer per Microsoft x64 calling
+convention) is **not freshly loaded there** — it was set earlier, at `R8 = LEA [RDI + 0x80]` (`RDI` = `param_1`,
+the task object itself), i.e. the key pointer is `&(task_object + 0x80)`. That field is the exact one the
+earlier-documented state-1 logic keeps synchronized with `task_object + 0x78` via a dirty-check/copy
+(`if (*plVar8 == *plVar3) {...} else {*plVar8 = *plVar3; *state = 1;}`). So the composite key's ultimate source,
+on the *producer* side, is a field the async task stores on itself — consistent with "which body was this task
+asked to build Stellar Forge data for," set once when the task is created/queued, exactly as expected for a
+request-processing state machine. This confirms the key-sourcing mechanism all the way back to the task object,
+but — as the caveat above already notes — still doesn't independently confirm `body_object+0x18` (read inside
+`FUN_1439168e0`, on the *object the lookup returns*, not the task that requested it) holds this identical value
+rather than a derived copy stored on the body object during its own construction/caching. That specific link
+(tracing the body object's constructor) remains the one open step for full closure.
+
 **Supporting evidence found (same hash, reused as a hash-table bucket function):** `FUN_143ce8660`, the function
 that looks up the body object consumed by `FUN_1439168e0`, independently contains the **exact same** Wang hash
 sequence applied to a 64-bit key (`*param_3`), used purely as a hash-table bucket index:
