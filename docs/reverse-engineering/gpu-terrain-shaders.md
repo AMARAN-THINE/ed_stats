@@ -459,3 +459,22 @@ earlier), and DXBC represents a double's two 32-bit halves as two components of 
 register numbers — so "TEMP1" and "TEMP2" as printed may actually be swizzled views into related storage rather than
 fully distinct registers. The directional conclusion (single double value, not two unrelated fields) is reasonably
 confident from the `FTOD`×2 + `MOV` pattern alone, but the exact bit-level packing is not fully resolved.
+
+## `cb1[10..16]` cluster: a second parameter group, plus a decoder bug flagged
+
+Scanning all `CB[1][N]` accesses in the small terrain kernel found a real, heavily-used cluster at indices
+**10 through 16** (7 elements), separate from the octave count at index 80. Usage pattern: extensive `LT`/`EQ`/
+`MOVC` threshold comparisons and `DP3` dot products against these values (e.g. `LT ... CB[1][15]`,
+`ADD ... CB[1][10] + CB[1][11]`, `DP3 ... CB[1][12]`, `DP3 ... CB[1][13]`). This shape — several threshold/comparison
+constants feeding conditional blending (`MOVC`) — is consistent with evaluating one of the named terrain-feature
+parameter blocks documented in `stellar-forge-struct.md` (e.g. `StellarForgeInputBasins`'s `MinDepth`/`MaxDepth`/
+`SizeBias`/`BorderSharpness`, or similar threshold-style fields from `Mountains`/`Ridges`/`Escarpments`) — **this is
+a plausible mapping, not a confirmed one**; no field-for-field correspondence between this cb1 index range and the
+CPU struct's documented offsets was established.
+
+**Decoder bug flagged, not treated as data**: the same scan also produced one clearly garbled instruction (an `ADD`
+with ~20 empty/malformed operands) near the start of the instruction stream, which spuriously decoded a
+`CB[1][81]` access (out of bounds for the buffer's declared 81-element size). This is a parsing artifact from
+`tools/decode_dxbc_operands.py`, not a real shader instruction, and is explicitly **not** reported as a finding.
+The decoder has at least one remaining edge-case bug (likely in extended-operand-token handling) that should be
+fixed before trusting any single anomalous-looking operand decode near a `CUSTOMDATA`/declaration boundary.
