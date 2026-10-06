@@ -86,3 +86,13 @@ hashed-field dispatcher searched for (and not found) earlier in `codex-journal.m
 *technique* (DJB2, case-insensitive), different and unrelated use site. The original hash-dispatcher search remains
 unresolved — this was a legitimate lead that turned out not to be the mechanism, documented honestly as such rather
 than left unexamined.
+
+## Park-Miller LCG claim also checked: no match
+
+Searched all decompiled output from this verification pass (5,303 lines across all 8 originally-checked functions)
+for the Park-Miller/Schrage constants the document cites (`48271`, `44488`, `3399`, modulus `0x7FFFFFFF`). **No
+match anywhere.** Combined with the MT19937 and Wang-hash findings above, every specific PRNG/hash claim in the
+external document that was checked has failed verification against this binary — either pointing to unrelated code,
+or (DJB2) a real but differently-purposed finding. The document should not be treated as a reliable source for any
+of its remaining unchecked claims (star synthesis, habitable-zone formulas, planetary struct layout) either, absent
+independent verification of each one.
