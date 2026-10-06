@@ -48,10 +48,10 @@ just a guessed field order. Field type is `float` unless noted; `param_1[N]` = o
 | 0x9c–0x9e | `StageOne`, `StageTwo`, `StageThree` | CoarseProportions |
 | 0xa2 | `MaxPhysicalHeight` | V3BodySize |
 | 0x20c | `PlanetRadius` | V3BodySize / also used as `PlanetRadius` in CommonVariables (0x1b wasn't it — see note) |
-| 0x20d | seed value, passed to `FUN_1439da060` | Seed |
-| 0x210 | passed to `FUN_1439d9740` (uninspected) | — |
-| 0x214+ | passed by pointer to `FUN_1439d9b40` (uninspected) | — |
-| 0x21c+ | passed by pointer to `FUN_1439d9200` (uninspected) | — |
+| 0x20d | seed value, serialized (not computed) by `FUN_1439da060` as `"StellarForgeInputSeed"` | Seed |
+| 0x210 | passed to `FUN_1439d9740`, serialized as `StellarForgeInputGravity`/`SurfaceGravAccelInG` | Gravity |
+| 0x214+ | passed by pointer to `FUN_1439d9b40`, serialized as `StellarForgeChosenMaterials` (`Material_%u` entries) | — |
+| 0x21c+ | passed by pointer to `FUN_1439d9200`, serialized as `Amplitude0-3`/`DistanceStart`/`DistanceFinish` | — |
 | 0xc0 (double) | `AverageSurfaceTemperature` | V3SurfaceInfo |
 | byte 0x28e | `IceCap` | V3SurfaceInfo |
 | byte 0x28f | `TidalLocking` | V3SurfaceInfo |
@@ -67,11 +67,28 @@ Indexed arrays, loop-driven, 4 elements (`uVar3 = *(uint*)(param_2+0xa0)` is the
 `DirectionLength%ux/y/z/w` (4 float components per direction, for up to the count read at `+0xa0`), `FracRadius%u`,
 and a final scalar `NumCraters`.
 
+## `FUN_1439da060`/`FUN_1439d9b40`/`FUN_1439d9200`/`FUN_1439d9740` decompiled: confirmed dead end, not entropy sources
+
+A follow-up pass decompiled all 4 previously-flagged functions. All four are **key/value struct-field serializers**
+— the same request-object-construction pattern documented repeatedly elsewhere in this repo
+(`FUN_140541280`/`FUN_14071b6e0`/`FUN_14071d1f0` building a tree of named fields) — not RNG or generation code.
+Despite its name/role ("seed, passed to..."), `FUN_1439da060` only writes the pre-existing seed value it's handed
+(`param_2`) into a KV node literally named `"StellarForgeInputSeed"`; it does not compute or derive that value.
+This definitively closes this specific lead as a dead end for locating the entropy source — it was a reasonable
+thing to check given the misleading field label, but it's export plumbing like the rest of this struct, not
+generation math.
+
+The same pass surfaced more field names from these serializers, confirming and extending the table above:
+`StellarForgeChosenMaterials` (dynamic `Material_%u` sub-entries), `StellarForgeAdditionalInformation`,
+`DisplacementItemName`, `Amplitude0`–`Amplitude3`, `DistanceStart`, `DistanceFinish` (all from `FUN_1439d9200`'s
+body, a displacement/amplitude-ramp sub-struct), and `StellarForgeInputGravity`/`SurfaceGravAccelInG`/`Gravity`
+(from `FUN_1439d9740`).
+
 ## Caveats
-- `FUN_1439da060` (seed, 1,004 addresses), `FUN_1439d9b40`, `FUN_1439d9200`, `FUN_1439d9740` were not decompiled in
-  this pass — the seed handler in particular is worth a follow-up since it's the actual entropy source.
-- This whole function is export/serialization, not generation — it tells you the struct's shape, not the math that
-  fills it in (noise functions, crater placement, etc. live elsewhere and were not located in this pass).
+- This whole function (and the 4 above) is export/serialization, not generation — it tells you the struct's shape,
+  not the math that fills it in (noise functions, crater placement, etc. live elsewhere; the GPU-side noise math
+  is covered separately in `gpu-terrain-shaders.md`/`stellar-forge-noise-spec.md`, and the CPU-side seed-derivation
+  site remains unlocated after this and prior attempts).
 
 ## Noise-generator module graph (confirmed noise algorithm identity)
 
