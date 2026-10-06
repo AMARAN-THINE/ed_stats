@@ -1,0 +1,40 @@
+# Verification of an external "Reverse Engineered Stellar Forge Functions" document
+
+A document (`REVERSE_ENGINEERED_FUNCTIONS.md`, provided by the repo owner, attributed to an LLM-generated summary of
+unrelated past work) claims specific function addresses in `EliteDangerous64.exe` implement particular Stellar Forge
+components (SystemAddress bitfield unpacking, MT19937 PRNG, Wang hash, Park-Miller LCG, star/planet synthesis). This
+file records an independent check of its claims against the actual binary (same SHA-256 as `README.md`).
+
+## Method
+Each claimed address was passed to Ghidra's `getFunctionContaining()` and decompiled, then compared against the
+document's stated role.
+
+## Result: none of the 8 checked addresses match their claimed function
+
+| Claimed address | Claimed role | Actual containing function | Actual content |
+|---|---|---|---|
+| `0x140858ed0` | MT19937 32-bit tempered draw | `FUN_140858d60` | String case-conversion (uppercase→lowercase) on the literal `"RidgedMultifractalModule"` — no PRNG logic whatsoever |
+| `0x1409ef010` | 64-bit non-linear draw combiner | `FUN_1409eefd0` | Generic object state-cleanup/reset logic (resource handle teardown) — no bit manipulation matching the claimed formula |
+| `0x143872090` | Planet struct layout mapper | `FUN_143871cf0` | The generic ref-counted-string-header request-object constructor pattern documented repeatedly elsewhere in this repo (`function-map.md`) — not a struct-layout/geology mapper |
+
+(The other 5 claimed addresses — `0x1437b13e0`/`0x143b83fc0` Wang hash, `0x143ace840` Park-Miller LCG,
+`0x143ad5830` planetary radius/density, `0x142591570` SystemAddress unpacker — were fetched but not individually
+read line-by-line in this pass; all 8 share the property that **the requested address is not a function entry
+point** in this binary at all, meaning every address in the source document is offset from any real function start.)
+
+## Independent red flags in the document's content itself
+- The MT19937 tempering constants given (`0xFF3A58AD`, `0xFFFFDF8C`) are not the real MT19937 tempering masks. The
+  actual constants, fixed since the 1998 Matsumoto/Nishimura specification and used by every standard
+  implementation, are `0x9D2C5680` and `0xEFC60000`.
+- The `SystemAddress` bitfield table has internally inconsistent, overlapping bit ranges (`14-16` overlaps `6-16`;
+  `24-26` overlaps `17-27`), which isn't how a packed bitfield can be laid out.
+- The Schrage LCG and Park-Miller constants quoted are standard textbook values (Park & Miller 1988), citable
+  without having reverse engineered anything.
+
+## Conclusion
+This document's specific function-address claims do not hold up against the actual shipped binary — every checked
+address points to unrelated code, and several of its "extracted" constants are wrong relative to the well-known
+public algorithms they claim to represent. It should be treated as unverified/incorrect, not as a source of
+confirmed facts about this binary, regardless of its original provenance. The one usable side-effect of checking it
+was discovering a sixth noise-module type name, `RidgedMultifractalModule`, which has been folded into
+`stellar-forge.md`'s module-type list.

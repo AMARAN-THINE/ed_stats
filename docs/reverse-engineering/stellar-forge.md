@@ -73,3 +73,10 @@ dioxide, water-rich, methane-rich, …, down to exotic magma compositions like "
   Recovering the actual generation math would require decompiling and understanding the functions that *consume* this
   struct, which is a large, open-ended task not attempted here.
 - No copyrighted art/audio/narrative assets, and no attempt to decrypt the `FREA`-protected asset store.
+
+## Addendum: sixth noise-module type found
+
+While verifying an external document's claims against the binary (see `external-doc-verification.md`), a sixth
+noise-module type name was found as a string literal: `RidgedMultifractalModule`, alongside the previously
+documented `PerlinModule`, `BillowModule`, `AutoScaleModule`, `ConstantModule`, `ConstantColourModule`, and
+`CurlPerlinModule`. No sample graph using it was found (same caveat as `CurlPerlinModule`).
