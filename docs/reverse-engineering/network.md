@@ -162,3 +162,6 @@ reset — same single-constructor-with-parameter-selected-action shape as the np
 
 `FUN_141c09bd0` (`elite/starsystem`, 222 addresses) shows the same hashed-field pattern (no string-literal field
 names), consistent with the system-wide pattern already confirmed elsewhere.
+
+`FUN_14260d130` (`elite/starsystem`, 1,404 addresses) references `"WingNavLock"` — likely tied to the wing
+nav-lock/follow-target feature (sharing a target system with wing members), otherwise uses the hashed-field pattern.
