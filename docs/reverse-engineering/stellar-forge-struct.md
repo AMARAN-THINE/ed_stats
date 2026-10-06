@@ -569,3 +569,29 @@ for this specific sub-investigation. The `SystemAddress`-rooted seed-derivation 
 "substantially confirmed" (per the capstone `GetStellarForgeBodyInfo` finding above); full bit-for-bit identity
 of `body_object+0x18` remains the one open item, now understood to require vtable/RTTI reconstruction work
 rather than more call-chain tracing to close.
+
+## Wang hash confirmed as the engine's general-purpose default integer hash: found a 4th occurrence
+
+Decompiled `GetRandomGenerator`'s real implementation too (`FUN_1429e7bb0`, found via its Lua registration entry
+`&LAB_1429e7bb0` — another `LAB_`-prefixed address needing `CreateFunctionCmd`, same as `GetStellarForgeBodyInfo`).
+When called with no explicit seed argument, it:
+```c
+puVar3 = FUN_14054d670(&uStack_18, 0);         // fills {seconds, nanoseconds} from the wall clock
+uVar4 = *puVar3 * 0x40000 + ~*puVar3;          // the exact same Wang 64-to-32 hash, applied to the seconds value
+uVar4 = (uVar4 >> 0x1f ^ uVar4) * 0x15;
+uVar4 = (uVar4 >> 0xb  ^ uVar4) * 0x41;
+uVar5 = (uint)(uVar4 >> 0x16) ^ (uint)uVar4;   // -> default RNG seed
+```
+`FUN_14054d670` was also decompiled: it's a `GetSystemTimeAsFileTime`-based wall-clock reader, normalizing the
+Windows `FILETIME` into a `{seconds, nanoseconds}` pair (a `std::chrono::system_clock`-style timespec
+conversion) — i.e. this is the engine's equivalent of `srand(time(NULL))`, except hashing the raw timestamp
+through Wang's hash instead of using it directly.
+
+This is the **fourth** confirmed occurrence of the identical Wang-hash sequence in this binary (terrain seed,
+the generic ID-keyed hash-table bucket function, and now the default Lua RNG seed), on top of the second,
+differently-masked scheme found separately. This settles any doubt about whether the terrain-seed's use of Wang
+hash was a special, Stellar-Forge-specific algorithm — it's clearly a shared, general-purpose default-hash
+utility (very likely a single inlined header function) used throughout the engine wherever an arbitrary 64-bit
+value needs decorrelating into a 32-bit value, consistent with (not a coincidence weakening) the terrain-seed
+conclusion: using this same utility on `SystemAddress`-rooted input is exactly what this codebase does by
+convention, everywhere.
