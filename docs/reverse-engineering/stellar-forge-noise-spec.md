@@ -77,40 +77,34 @@ if 0 < s:
     n = n * 2.0                         // double amplitude when the normalized value is in-range
 ```
 
-**Final post-octave-loop shaping (genuine smoothstep):**
+**Final post-octave-loop shaping (genuine smoothstep) — fully confirmed by register-level trace:**
 ```
-total = sum * 77.0                      // sum = accumulated multi-octave DP4 total, step 6
-t     = (total + 1.0) * 0.5             // -> [0, 1]
-curveA = t*t * (3.0 - 2.0*t)            // = 3t^2 - 2t^3, canonical smoothstep(t)
-curveB = <second, differently-weighted smoothstep-shaped term, same t>  // Probable, see below
-result = (curveA + curveB) * CB[3][21]  // CB[3][21]: per-call runtime scale constant
+total  = sum * 77.0                      // sum = accumulated multi-octave DP4 total, step 6
+t      = (total + 1.0) * 0.5             // -> [0, 1]
+A      = t*t * (3.0 - 2.0*t)             // = 3t^2 - 2t^3, canonical smoothstep(t)
+result = 0.1*A + (0.1*A + 1.0)*(0.1*A + 1.0)
+result = result * CB[3][21]              // CB[3][21]: per-call runtime scale constant
 ```
-`curveB` uses constants `0.1`, `0.6667` (`2/3`), `0.3333` (`1/3`) over the same normalized `t`/derived values —
-clearly a second cubic/Hermite-family term blended with `curveA`, but its exact closed form and purpose (most
-likely a separate channel such as material blend or a secondary height-curve weight) were not fully isolated in
-this pass.
-
-The earlier `38.5`/`1/60`/`1/120` constants reported in a prior pass were a misread of an ephemeral,
-not-saved disassembly run and do not appear in this re-traced, saved instruction sequence — this entry
-supersedes that one.
+A separate `0.5`/`0.6667`(`2/3`)-weighted quartic block (computed from the pre-squared `(3-2t)` term) was traced
+in parallel and found to be **dead code**: its result is written to the same register the line above overwrites
+before any instruction reads it. This was reported as a "second blended smoothstep term" in an earlier pass of
+this file — that was wrong; corrected here after tracing every subsequent read of the register in question. Most
+likely a compiler/shader-permutation-template artifact, not a real second term.
 
 ## 8. Output — Probable (revised once)
 A single double-precision value (height), written as two 32-bit halves to a structured UAV at byte offsets 0 and 16
 of the output record.
 
 ## What's needed to go further
-1. Isolate `curveB`'s exact closed form in step 7's final shaping (the second smoothstep-like term blended with
-   `curveA`) and its purpose — most likely a second output channel (material/biome weight) rather than a height
-   correction, given it's blended additively before the single `CB[3][21]` scale rather than branched on.
-2. Confirm step 5's weight-vector construction (`TEMP9`'s role across all 4 corners, not just one).
-3. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — only 2 constants (`3635633`, `15452791`) were
+1. Confirm step 5's weight-vector construction (`TEMP9`'s role across all 4 corners, not just one).
+2. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — only 2 constants (`3635633`, `15452791`) were
    found directly; a search for a third distinct per-axis constant this session instead found `30798437` recurring
    identically across multiple hash computations (so it's a general finalization-round constant, not axis-specific)
    and `3184315597` used in an unrelated threshold comparison (`CB[1][12]`) with nothing to do with the hash. The
    third axis constant, if one exists, was not found.
-4. Apply this same tracing to the large (~200K-instruction) permutations to find per-planet-class branches (basin,
+3. Apply this same tracing to the large (~200K-instruction) permutations to find per-planet-class branches (basin,
    mountain, crater features documented in `stellar-forge-struct.md` presumably select different code paths or
    parameter sets not present in this smallest/simplest permutation).
-5. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation remains unlocated (see `codex-journal.md`/
+4. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation remains unlocated (see `codex-journal.md`/
    `stellar-forge-struct.md` for the dead-end log) — without it, this spec can evaluate noise for an arbitrary seed,
    but not derive the correct seed for a given real system.

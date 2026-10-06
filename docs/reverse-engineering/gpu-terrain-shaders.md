@@ -432,12 +432,34 @@ TEMP1 = TEMP1 * TEMP1               // TEMP1 = t^2
 TEMP1 = TEMP1 * TEMP2               // TEMP1 = t^2*(3-2t) = 3t^2 - 2t^3   <- canonical smoothstep(t)
 ```
 `3t² − 2t³` is the textbook Hermite/"smoothstep" cubic (the same curve used in Ken Perlin's own smoothstep and
-in countless terrain/shader pipelines) applied to the fully-summed, `77.0`-normalized noise value. The
-instructions immediately following (`*0.1`, a second `0.6667/0.3333`-weighted smoothstep-like block feeding
-`TEMP2`, then `TEMP1 = TEMP1 + TEMP2`) blend this smoothstepped value with a second, differently-weighted
-smoothstep term before the result is multiplied by `CB[3][21]` (a per-call constant-buffer scale) — i.e. this is
-a **two-term blended smoothstep shaping curve**, not a single formula; the second term's exact role (a secondary
-curve for a different biome/material channel, most likely) is not yet traced further.
+in countless terrain/shader pipelines) applied to the fully-summed, `77.0`-normalized noise value.
+
+**Correction to the previous entry here:** the instructions immediately following were re-checked
+register-by-register and the "second blended smoothstep term" described earlier was wrong. The actual sequence,
+with `A = 3t²-2t³` from above:
+```
+TEMP2 = TEMP2 + 0.5        // TEMP2 here still holds (3-2t) from before TEMP1 was squared
+TEMP2 = TEMP2 * 0.6667
+TEMP2 = TEMP2 * -2.0
+TEMP2 = TEMP2 + 3.0
+TEMP2 = TEMP2 * TEMP2
+TEMP2 = TEMP2 * TEMP2       // TEMP2 now holds ((3-2t+0.5)*0.6667*-2+3)^4 -- a quartic of a shifted (3-2t)
+TEMP1 = TEMP1 * 0.1         // TEMP1 = A * 0.1   (A computed above)
+TEMP2 = TEMP1 + 1.0         // <- TEMP2 is OVERWRITTEN here with TEMP1+1.0, discarding the quartic just computed
+TEMP2 = TEMP2 * TEMP2       // TEMP2 = (0.1A + 1.0)^2
+TEMP1 = TEMP1 + TEMP2       // TEMP1 = 0.1A + (0.1A + 1.0)^2
+result = TEMP1 * CB[3][21]  // final scale
+```
+So the `0.5`/`0.6667`/squared-twice quartic block is **genuinely dead code in this compiled permutation** — its
+result is computed and then immediately overwritten before any use, confirmed by tracing every subsequent read of
+`TEMP2`. This is very likely a compiler/permutation artifact (e.g. a term relevant to a different code path or
+output channel in the shader-generator template that didn't get eliminated for this specific permutation), not a
+real second shaping term. The actual, fully-confirmed final formula is just:
+```
+A      = 3t² - 2t³                  // t = (sum*77.0 + 1.0) * 0.5
+result = 0.1·A + (0.1·A + 1.0)²
+result = result * CB[3][21]         // per-call runtime scale constant
+```
 
 The earlier "`1/60`/`1/120`" constants were a misread from the original (now superseded) pass — they do not
 appear in this corrected, re-traced instruction sequence; both remap sites use only `77.0`, `0.5`, `1.0`, `2.0`,
@@ -477,8 +499,8 @@ of Stellar Forge's per-sample terrain evaluation:
 avalanche using `XXH_PRIME32_5`) → `hash % 12` gradient selection from an extracted standard Perlin 12-vector table
 → quartic Simplex falloff weighting → `DP3`/`DP4` combine across 4 corners (`*77.0` normalize, conditional `*2.0`
 amplitude correction for out-of-range excursions) → octave loop (data-driven count from `cb1[80]`, per-octave
-parameters from `cb1[]`) → final `*77.0`-normalized smoothstep (`3t²-2t³`) blended with a second, differently
-weighted smoothstep term, scaled by a `CB[3][]` runtime constant → two-field structured output record.**
+parameters from `cb1[]`) → final `*77.0`-normalized smoothstep `A = 3t²-2t³`, shaped as `0.1·A + (0.1·A+1.0)²`,
+scaled by a `CB[3][21]` runtime constant → two-field structured output record.**
 
 Every arrow in that chain is backed by extracted opcode/operand/constant evidence from the shipped binary, not
 inferred from names alone — this is the practical foundation an offline reimplementation would start from.
