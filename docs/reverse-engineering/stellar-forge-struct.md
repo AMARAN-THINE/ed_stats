@@ -39,6 +39,23 @@ has not yet been independently confirmed — that requires tracing where `body_o
 this pass did not do. The hash function identification itself is solid (exact algorithmic match); the semantic
 claim "this IS the SystemAddress" is not yet proven and should be treated as the next concrete step, not fact.
 
+**Supporting evidence found (same hash, reused as a hash-table bucket function):** `FUN_143ce8660`, the function
+that looks up the body object consumed by `FUN_1439168e0`, independently contains the **exact same** Wang hash
+sequence applied to a 64-bit key (`*param_3`), used purely as a hash-table bucket index:
+```
+bucket = WangHash64to32(key) % *(bucketCount at param_1+0x148)
+entry  = bucketArray[param_1+0x140][bucket]
+while entry != sentinel:
+    if key == entry.storedKey: return entry.objectPointer   // classic chained hash map
+    entry = entry.next
+```
+This is a general-purpose 64-bit-ID-keyed hash map (bucket array + chaining + stored-key comparison), and it's
+exactly the kind of structure an engine would use to look up a specific celestial body by a unique 64-bit ID
+(a `SystemAddress`/`BodyID`-style key is the obvious candidate for what such a cache would be keyed on). This
+doesn't prove `body_object+0x18` is that same key — the call site's exact key-passing wasn't fully resolved in
+this pass — but it shows the same hash function is the engine's general per-body-ID hashing primitive, not a
+one-off, which is consistent with (though not proof of) the SystemAddress/BodyID hypothesis above.
+
 `FUN_1439d7f30` (`0x1439d7f30`, 4,802-address function) is a **serializer**: it walks a fixed in-memory struct
 (`param_1`, a pointer treated as `undefined4*`, so offsets below are in 4-byte units unless noted) and writes each
 field out under its string name via `FUN_1439da630` (float field) / `FUN_1439da8e0` (bool field) into a key/value
