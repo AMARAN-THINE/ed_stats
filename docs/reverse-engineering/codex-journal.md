@@ -552,3 +552,8 @@ event-name-only entries, consistent with how `HeatWarning`/`HeatDamage` were doc
 Two slightly different field sets found (likely an engine-version difference, matching the game-update point raised
 in this conversation): `CollectCargo`/`EjectCargo`: `Type`, `Count`, `Stolen`, `Abandoned`, `MissionID`, with a newer
 variant adding `PowerplayOrigin`.
+
+## `LaunchFighter`/`LaunchSRV`/`LaunchVessel` schema
+
+`LaunchFighter`/`LaunchSRV`/`LaunchVessel`: `VesselType`, `Loadout`, `PlayerControlled`, `FighterRebuilt`, `ID`,
+`SRVType`.
