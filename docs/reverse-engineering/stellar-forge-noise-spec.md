@@ -40,18 +40,23 @@ GRADIENTS_3D = [
 ```
 This is the standard public 12-edge Perlin gradient set (not Frontier-original).
 
-## 4. Corner weight — Confirmed shape, Probable exact constant
+## 4. Corner weight — Confirmed, register-traced in full (dword offset 428–561)
 ```
-d = dot(offset, offset)      // offset = sample position - corner position
-t = max(0, d + 0.5)          // Probable: sign/constant not independently re-derived from first principles
-t = t * t * t * t             // t^4 — classic simplex-noise falloff
-contribution = t * dot(GRADIENTS_3D[gradientIndex], offset)
+offset[4 corners] = TEMP4, TEMP6, TEMP8, TEMP9   // one 3-component offset vector per corner
+d[i] = dot(offset[i], offset[i])                 // DP3, one per corner, all written into TEMP10's 4 lanes
+t[i] = max(0, d[i] + 0.5)
+t[i] = t[i]^2
+t[i] = t[i]^2            // t^4 total — classic simplex-noise quartic falloff, now confirmed per-corner in TEMP10
+contribution[i] = dot(IMM_CBUFFER[gradientIndex[i]], offset[i])   // DP3, one per corner, all written into TEMP5
 ```
 
-## 5. Combine corners — Confirmed opcode (DP4), Unresolved exact weight vector construction
+## 5. Combine corners — Confirmed opcode and operands, fully resolved
 ```
-noise = dot4(weights, contributions)   // weights = [t0^4, t1^4, t2^4, t3^4] per corner, Probable
+noise = dot4(TEMP10, TEMP5)   // TEMP10 = [t0^4..t3^4] weight vector, TEMP5 = [contribution0..3] gradient dot products
 ```
+(Corrects the earlier "Unresolved exact weight vector construction" / "TEMP9's role" note: `TEMP9` is just the
+4th corner's offset vector, not the weight accumulator — `TEMP10` holds the weight vector, confirmed by tracing
+all 4 `DP3` writes into it before the final `DP4`.)
 
 ## 6. Octave loop — Confirmed
 ```
@@ -96,15 +101,14 @@ A single double-precision value (height), written as two 32-bit halves to a stru
 of the output record.
 
 ## What's needed to go further
-1. Confirm step 5's weight-vector construction (`TEMP9`'s role across all 4 corners, not just one).
-2. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — only 2 constants (`3635633`, `15452791`) were
+1. Determine `AXIS_CONST` assignment per axis (x/y/z) definitively — only 2 constants (`3635633`, `15452791`) were
    found directly; a search for a third distinct per-axis constant this session instead found `30798437` recurring
    identically across multiple hash computations (so it's a general finalization-round constant, not axis-specific)
    and `3184315597` used in an unrelated threshold comparison (`CB[1][12]`) with nothing to do with the hash. The
    third axis constant, if one exists, was not found.
-3. Apply this same tracing to the large (~200K-instruction) permutations to find per-planet-class branches (basin,
+2. Apply this same tracing to the large (~200K-instruction) permutations to find per-planet-class branches (basin,
    mountain, crater features documented in `stellar-forge-struct.md` presumably select different code paths or
    parameter sets not present in this smallest/simplest permutation).
-4. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation remains unlocated (see `codex-journal.md`/
+3. Separately: the CPU-side `SystemAddress`/`BodyID` → seed derivation remains unlocated (see `codex-journal.md`/
    `stellar-forge-struct.md` for the dead-end log) — without it, this spec can evaluate noise for an arbitrary seed,
    but not derive the correct seed for a given real system.
