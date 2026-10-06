@@ -547,3 +547,25 @@ different masking formula entirely, so it should not be assumed to be the same I
 `BodyID` without further tracing of what calls `FUN_143ce8800` and what `param_2` represents there. Recorded here
 as a real, verified algorithm (the shifting-width tag scheme is unambiguous from the decompiled constants) for
 future reference, not folded into the `SystemAddress` conclusions above.
+
+## Both remaining identity-trace attempts dead-end on the same obstacle: virtual dispatch, no RTTI
+
+Two follow-ups were tried to close the last gaps (confirming `body_object+0x18`'s identity, and identifying
+`FUN_143ce8800`'s `param_2`):
+1. Looked for direct callers of `FUN_143cd0400` (the async task whose `Update`-style method builds the terrain
+   seed) to find where the task — and its key field at `+0x78` — gets constructed/queued. All references found
+   are **data references from vtables**, not call instructions: this function is a virtual method, invoked only
+   through indirect/polymorphic dispatch, so there is no direct call site to trace back to a constructor this way.
+2. The same pattern repeats for `FUN_143ce8800`: its only references are two more data/vtable entries, confirming
+   it's also a virtual method (likely shared, inherited, unoverridden behavior across multiple otherwise-distinct
+   subclasses, which is why multiple unrelated vtable slots point at the same implementation).
+
+Both dead-end on the same underlying obstacle: this binary's RTTI is almost entirely stripped (only ~24 RTTI
+structures exist in the whole binary, found and checked in an earlier pass — none matching these classes), so
+there's no practical way to enumerate "which vtables point here" or reconstruct the owning class's layout without
+a full manual data-segment sweep for vtable arrays (scanning for contiguous runs of code pointers and
+cross-checking each slot) — a substantially larger undertaking than this pass, and a reasonable stopping point
+for this specific sub-investigation. The `SystemAddress`-rooted seed-derivation conclusion stands as
+"substantially confirmed" (per the capstone `GetStellarForgeBodyInfo` finding above); full bit-for-bit identity
+of `body_object+0x18` remains the one open item, now understood to require vtable/RTTI reconstruction work
+rather than more call-chain tracing to close.
