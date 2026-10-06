@@ -76,10 +76,41 @@ consistent with a packed spatial identifier in the `SystemAddress` family (shard
 region/sector is a natural design). This is a different call site than the one feeding `FUN_1439168e0`, so it
 does **not** directly confirm what `body_object+0x18` holds — it's offered only as suggestive context for the
 hypothesis, not as evidence for this specific field.
-Neither angle resolved it. The semantic identity of `body_object+0x18` remains **unconfirmed** — treated as an
-open question, not fact, consistent with the caveat above. Further progress would need either locating the
-sibling function that actually serializes `SystemAddress`/`BodyID` with live values (not just the header) for a
-journal event on the same object type, or tracing the object's constructor directly.
+Neither angle resolved it by itself. The semantic identity of `body_object+0x18` remains **unconfirmed** — treated
+as an open question, not fact, consistent with the caveat above.
+
+**Strong corroborating evidence found via a third angle: the real `GetSystemAddress` Lua binding, decompiled.**
+The Lua API table (`stellar-forge.md`) lists `GetSystemAddress` by name only; its actual implementation was
+located by finding the single reference to the literal string `"GetSystemAddress"` (at `0x1453056c0`), which
+leads straight to its registration in the master Lua-binding function `FUN_1429d5990`
+(`FUN_14078b4f0(&local_res8, "GetSystemAddress", FUN_1429eacb0, 0xffffffff)`), confirming the real implementation
+is `FUN_1429eacb0`. Decompiled:
+```c
+plVar5 = FUN_140792670(param_1, 1);       // resolve Lua arg 1 ("self"/location object)
+lVar6 = *plVar5;
+lVar1 = *(longlong *)(lVar6 + 0x10);
+cVar3 = FUN_1408beea0(lVar1 + 0x20);      // flag check on the field at +0x20
+uVar2 = *(undefined8 *)(*(longlong *)(lVar6 + 8) + 0x10);
+if (cVar3 == '\0') {
+    FUN_140787440(local_res8, uVar2);                                    // path A: no mask
+} else {
+    FUN_1407873f0(local_res8, uVar2, *(ulonglong *)(lVar1 + 0x20) & 0x7fffffffffffff);  // path B: masked
+}
+```
+**This is the same exact `& 0x7fffffffffffff` (low-55-bit) mask found independently in the unrelated hash-table
+sharding code (`FUN_143ce8740`, documented above) — not a coincidence this time, since this is the real,
+by-name-confirmed `GetSystemAddress` accessor itself.** This substantially strengthens (without yet being 100%
+conclusive, since the two call sites are still on different objects) the case that the 55-bit-masked hash-table
+sharding scheme documented above is specifically operating on `SystemAddress`-family values, and that real
+`SystemAddress` values on this "location object" (at `lVar1+0x20`, gated by a flag byte for whether to apply the
+mask) do get the same bit-masking treatment.
+
+**Still not fully closed:** this confirms a struct offset (`+0x20` on a *different* object than `body_object` in
+`FUN_1439168e0`) for `SystemAddress` itself, and confirms the 55-bit mask is specifically applied to
+`SystemAddress`-class values elsewhere in the engine — but it does not yet trace whether this `lVar1+0x20` field
+and the terrain-seed's `body_object+0x18` field are the same value, the same object, or merely related/sibling
+objects in the same location hierarchy. Tracing that connection (what object is `lVar1`, and is it reachable from
+or identical to the body object `FUN_1439168e0` operates on) is the next concrete step, not yet done here.
 
 `FUN_1439d7f30` (`0x1439d7f30`, 4,802-address function) is a **serializer**: it walks a fixed in-memory struct
 (`param_1`, a pointer treated as `undefined4*`, so offsets below are in 4-byte units unless noted) and writes each
