@@ -557,3 +557,9 @@ variant adding `PowerplayOrigin`.
 
 `LaunchFighter`/`LaunchSRV`/`LaunchVessel`: `VesselType`, `Loadout`, `PlayerControlled`, `FighterRebuilt`, `ID`,
 `SRVType`.
+
+## `FSSSignalDiscovered` — full field list (supersedes earlier partial note)
+
+Fuller field list found: `SystemAddress`, `SignalName`, `SpawningState`, `SpawningFaction`, `ThreatLevel`,
+`TimeRemaining`, `IsStation`, `USSType`, `SignalType`, `SpawningPower`, `OpposingPower`. This complements the single
+`SignalName` field confirmed earlier directly against decompiled code.
