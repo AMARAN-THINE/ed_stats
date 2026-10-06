@@ -595,3 +595,39 @@ utility (very likely a single inlined header function) used throughout the engin
 value needs decorrelating into a 32-bit value, consistent with (not a coincidence weakening) the terrain-seed
 conclusion: using this same utility on `SystemAddress`-rooted input is exactly what this codebase does by
 convention, everywhere.
+
+## Vtable/RTTI-reconstruction infrastructure built, applied to the body-object identity question
+
+Per the previous section's conclusion that the remaining gap needs vtable/RTTI reconstruction, three reusable
+Ghidra headless postScripts were written and added to `tools/`: `scan_vtable_slots.py` (walks a window of 8-byte
+slots around a known function-pointer data address, resolving each through Ghidra's `Data`/value API — not raw
+bytes, since **this binary's vtable slots are populated via base relocations and read as zero through
+`mem.getBytes()`**, a real pitfall worth recording for future passes), `find_vtable_refs.py` (a chunked,
+OOM-safe raw-byte scan of the entire `.text` section for `LEA reg, [rip+disp32]` encodings whose computed target
+matches a given address — built after discovering a naive single `bytearray(block.getSize())` read on the
+~81 MB `.text` section crashes the JVM with `OutOfMemoryError`), and `find_vtable_refs_movimm.py` (the sibling
+scan for the `MOV r64, imm64` absolute-address idiom).
+
+**Applied to `FUN_143ce8800`'s vtable** (found by taking the one confirmed non-stripped data xref to it,
+`0x14553d420`, and walking `scan_vtable_slots.py` around it): this **did** locate a real vtable array — a
+contiguous run of valid function pointers including `FUN_143ce8800`, `FUN_143cea560`, `FUN_143ce8940`, bounded
+on one side by a transition into a Wwise-audio-engine-looking block (`AK::MemoryMgr::GetCategoryStats` repeated
+many times, an unrelated class's vtable placed immediately before in `.rdata`) and on the other by a literal
+string (`"Overrides/Overrides"`) and, further along, a run of 4 `_purecall` stubs marking a different class's
+unimplemented pure-virtual slots. This confirms the vtable-array-location half of the infrastructure works.
+
+**The constructor search came back negative on both idioms**, scanned against the full `.text` section:
+`find_vtable_refs.py` and `find_vtable_refs_movimm.py` both returned **zero hits** for the vtable's slot-0
+address. This rules out the two most common ways a constructor materializes a vtable-pointer constant in x64
+MSVC code, and points toward the likely real explanation: **multiple-inheritance adjustor-thunk construction**,
+where a secondary base's vtable pointer is computed via pointer arithmetic from a primary vtable address already
+in a register, rather than loaded as a second independent literal constant — a pattern this simple byte-scan
+approach can't detect without also tracing which primary-vtable constants get offset-adjusted, a substantially
+larger undertaking.
+
+**Honest bottom line:** the infrastructure requested was built and works (vtable arrays are now locatable, and
+the two main constructor-materialization idioms can be ruled in/out mechanically) — applying it to this specific
+question produced a real negative result rather than the hoped-for positive identification, which is still
+useful (it correctly characterizes what kind of construction pattern to look for next, rather than a dead-end
+guess) but does not close the `body_object+0x18` identity question. That question is now understood precisely:
+it needs multiple-inheritance/adjustor-thunk-aware tracing, not a bigger version of the same byte-scan.
