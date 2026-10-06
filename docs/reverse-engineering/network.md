@@ -187,3 +187,5 @@ other cargo/mission handlers.
 
 `FUN_1433baea0` (second `elite/vehicle/dock` handler, 1,713 addresses — distinct from the verified `switch`
 dispatcher `FUN_1424e4fe0`) shows hashed-field pattern, no literal field names.
+
+`FUN_142537b60` (`elite/ship/destroyed/vacant`, 2,720 addresses) shows hashed-field pattern, no literal field names.
