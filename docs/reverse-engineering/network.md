@@ -176,3 +176,5 @@ pattern, consistent with npccrew/initiative handlers documented above.
 
 `FUN_1420b1c30` (`elite/mission/cargodepot/collect`, 1,050 addresses) shows hashed-field pattern, consistent with
 other cargo/mission handlers.
+
+`FUN_1412e5130` (`elite/service/limpets`, 593 addresses) shows hashed-field pattern, no literal field names.
