@@ -56,6 +56,22 @@ doesn't prove `body_object+0x18` is that same key — the call site's exact key-
 this pass — but it shows the same hash function is the engine's general per-body-ID hashing primitive, not a
 one-off, which is consistent with (though not proof of) the SystemAddress/BodyID hypothesis above.
 
+**Follow-up attempt to resolve this, result: inconclusive, documented honestly.** Two angles were tried to pin
+down whether `body_object+0x18` is literally `SystemAddress`/`BodyID`:
+1. `FUN_143ce8660` (the lookup) has **37 distinct callers** across the binary — it's a generic ID-keyed cache
+   accessor used by many unrelated subsystems, not something specific to celestial bodies. Caller-context alone
+   can't disambiguate what any one caller's key represents without reading all 37, which wasn't done.
+2. `FUN_142c9e5f0`, the journal handler already documented (`codex-journal.md`) as writing `SystemAddress`/`BodyID`
+   fields for the `ApproachBody`/`LeaveBody` events, was decompiled to check what offset it reads those fields
+   from on its body-like object — but it turned out to be only the **CSV-header string writer** (a literal
+   `"ApproachBody,LeaveBody,StarSystem,..."` header constant, gated behind a debug-export flag), not the function
+   that reads the live field values. It doesn't contain the offset information needed.
+
+Neither angle resolved it. The semantic identity of `body_object+0x18` remains **unconfirmed** — treated as an
+open question, not fact, consistent with the caveat above. Further progress would need either locating the
+sibling function that actually serializes `SystemAddress`/`BodyID` with live values (not just the header) for a
+journal event on the same object type, or tracing the object's constructor directly.
+
 `FUN_1439d7f30` (`0x1439d7f30`, 4,802-address function) is a **serializer**: it walks a fixed in-memory struct
 (`param_1`, a pointer treated as `undefined4*`, so offsets below are in 4-byte units unless noted) and writes each
 field out under its string name via `FUN_1439da630` (float field) / `FUN_1439da8e0` (bool field) into a key/value
