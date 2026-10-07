@@ -337,21 +337,48 @@ alone.
   the actual height/colour evaluation math; anything GPU-side (that lives in `.csa`/DXBC, a separate asset, not this
   executable).
 
-## `StellarForgeManager` top-level init (`FUN_1401f4700`, 11,163 addresses, 259 calls)
+## `FUN_1401f4700` corrected: it's the engine's GLOBAL subsystem bootstrap, not `StellarForgeManager`-specific
 
-Too large to decompile-and-read exhaustively, but its structure is clear from the named categories it loads in
-sequence (each via the same open/create-named-section pattern used throughout this subsystem): `Elite_Dangerous`
-(root namespace), `BodyInfoOverrideDatabase`, `OverrideDatabase`, `GalaxyRegions`, `PowerPlayRegions`,
-`StationColourGrading`.
+A follow-up pass finally decompiled this function (11,163 addresses, truncated at 240 decompiler instructions —
+still only a partial read, but far more than the previous "category names only" pass). **Correction to the
+previous framing below:** this is not a `StellarForgeManager`-specific initializer at all — it's the **engine's
+root startup routine that registers dozens of unrelated major subsystems** one after another, via one shared
+generic pattern (`FUN_1401e2f90`/`FUN_1401fa180`/a per-subsystem factory call, each taking the subsystem's name
+string and instance byte-size): `AudioManager`, `InputManager`, `DecalsManager`, `PlanetArtDatabase`,
+`StarDatabase`, `StellarResourceManager`, `SpaceShipManager`, `TrailManager`, `WeaponStreamManager`,
+`IrcGameClient`, `PlatformChatManager`, `CodeSentinelRegister` (anti-cheat), `ScaleformAudioManager`,
+`RootGalaxyMap`, `RootSystemMap`, and — among them — `StellarForgeManager` itself (confirmed instance size
+`0x4d0` = 1232 bytes), plus the previously-documented `BodyInfoOverrideDatabase`/`OverrideDatabase`/
+`GalaxyRegions`/`PowerPlayRegions`/`StationColourGrading` categories (which turn out to be sub-registrations
+*within* the generic `StellarForgeManager` construction call, not top-level siblings as originally framed).
 
-**Conclusion**: `StellarForgeManager`'s initialization is a **galaxy-wide static database loader** — region
-definitions, per-body overrides, Powerplay region data, and station colour-grading tables — not the per-planet
-procedural generator. This is consistent with `StellarForgeGalaxy`/`StellarForgeManager` being the "load the galaxy's
-static/authored data" layer, while the actual per-body noise evaluation (documented above as living partly in GPU
-compute shaders) is a separate, per-body code path invoked elsewhere, not inside this init function.
+**New Stellar-Forge-relevant names found via the 4 initialization calls that immediately precede
+`StellarForgeManager`'s own registration** (`FUN_1439c5250`, `FUN_143c957c0`, `FUN_1438986b0`, `FUN_141bf4780` —
+all decompiled this pass, each itself another batch of the same generic subsystem-registration pattern):
+- **`StellarForgeLiveManager`** (in `FUN_143c957c0`) — the long-hypothesized "live"/runtime counterpart to the
+  static `StellarForgeManager` database loader, now confirmed by name. Matches this repo's existing four-tier
+  architecture model (`stellar-forge.md`): static galaxy DB vs. live flight-sim generation.
+- **`StarSystemDataCache`** (in `FUN_141bf4780`) — very plausibly the actual name of the `SystemAddress`-keyed,
+  Wang-hash-based cache infrastructure (`FUN_143ce8660` and friends) traced extensively elsewhere in this file;
+  not independently confirmed as the *same* object, but a strong naming match worth flagging.
+- **`StellarForgeAuxiliaryGenerationSource`** (in `FUN_1439c5250`, instance size `0xf8` = 248 bytes) — a smaller,
+  separate registered subsystem alongside `ColourTableHelper`, `CompoundComponent`, `ElementComponent`,
+  `ReactionComponent` (chemistry-simulation-flavored names, plausibly feeding atmosphere/terrain material
+  composition), `NebulaTable`, `StationDatabase`, `StationNameDatabase`.
+- **`NoiseEffectsManager`** (`FUN_1438986b0`, only 516 addresses — the smallest of the 4, essentially just this
+  one registration call).
+- **`HiddenBodysiteManager`** (in `FUN_141bf4780`) — ties back to this file's earlier `GetBodysiteInfo`/
+  `GetBodysiteID` findings (ground settlements); "hidden" plausibly meaning not-yet-discovered settlements.
+- Also in `FUN_141bf4780`: `LocationInformationComponent` (matches the `ILocationInformation` interface-error-tag
+  finding elsewhere in this file), `LevelRingCellManager`/`LevelRingCellShape`/`TextureSliceManager` (terrain/ring
+  streaming), `FrameOfReferenceShiftHandler`/`StaticLocationComponent`/`SpaceLocationComponent`/`StarVisualAspect`
+  (location/physics/rendering), plus many clearly unrelated names (`HyperspaceComponent` family, `USSRegionManager`,
+  `NPCMissionGiverManager`, loading-screen components) confirming this really is a general cross-subsystem
+  bootstrap, not a Stellar-Forge-scoped function.
 
-This function was not decompiled line-by-line beyond identifying these category loads; a full read of its ~11k
-addresses was out of scope for this pass.
+None of the individual subsystem registration calls were decompiled further than the generic "name + size"
+pattern in this pass — each subsystem's *own* constructor (the actual code that runs once `StellarForgeManager`/
+`StellarForgeLiveManager`/etc. are instantiated) lives elsewhere and wasn't traced.
 
 ## `GetStellarForgeBodyInfo` is a Lua scripting API entry, not a standalone function
 
