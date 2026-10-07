@@ -723,3 +723,27 @@ by name, with generically-accessible callback slots) but doesn't move the `body_
 forward — that still needs either the adjustor-thunk-aware vtable trace or finding the actual *per-instance*
 job-scheduling call (which would take a real `SystemAddress`-like argument at the moment a specific system's
 "make ready" job is queued), neither of which this reflection-registration code path leads to.
+
+## `FUN_143c6b1c0` decompiled: the real mechanism behind every subsystem registration is DJB2-hash-by-name
+
+Followed up on the "`StellarForgeLiveManager` registration" call identified in the previous section
+(`FUN_143c6b1c0(&DAT_145fdd450, &local_348)`, hypothesized there as possibly subsystem-specific logic). Fully
+decompiled (11,905 addresses — almost entirely one giant unrolled loop): it's a **case-insensitive DJB2 string
+hash** (seed `0x1505` = 5381, multiplier `0x21` = 33, folding each byte to lowercase first) computed over the
+name string (`"StellarForgeLiveManager"` at this call site), unrolled per-character up to a large fixed max
+length rather than using an actual loop — the same DJB2 hash family already confirmed elsewhere in this repo for
+a damage/combat-component registry (`external-doc-verification.md`), now found reused as a **general named-object
+registry hash** too. After computing the hash (`iVar5`), the function calls `FUN_1407e6c40(param_1+1,
+&DAT_145efd5c0, iVar5, param_1, DAT_145efd5c8)` — registering `(hash, name, type-descriptor)` into what is very
+plausibly a global name→subsystem lookup table — then stamps a **distinct, call-site-specific** vtable constant
+(`&PTR_LAB_145539b00` for this instantiation) into the output slot.
+
+**This means every one of the differently-named "subsystem registration" calls seen in `FUN_1401f4700` and its 4
+preamble functions (`FUN_1401c8c80`, `FUN_1401774c0`, `FUN_143c68330`, `FUN_143c6b1c0`, …) is almost certainly
+the same compiler-generated template function** (e.g. a C++ `RegisterNamedSingleton<T>(slot, name)` helper),
+**instantiated once per subsystem type** — not a bespoke per-subsystem constructor as the previous section's
+framing assumed. The only thing that varies per instantiation is the embedded vtable/type constant and which
+global slot gets written; the actual hash-and-register logic is identical shared code. This corrects that
+section's working hypothesis and explains why no subsystem-specific construction logic was found: there isn't
+any at this call site — real per-subsystem initialization happens later, lazily, on first use via the name-hash
+lookup, not inline in this bootstrap sequence.
