@@ -747,3 +747,13 @@ global slot gets written; the actual hash-and-register logic is identical shared
 section's working hypothesis and explains why no subsystem-specific construction logic was found: there isn't
 any at this call site — real per-subsystem initialization happens later, lazily, on first use via the name-hash
 lookup, not inline in this bootstrap sequence.
+
+**Checked whether `FUN_1407e6c40` (the registration-insert call) could be the still-unlocated `Market.json`
+hashed-field dispatcher (`codex-journal.md`):** it has **3,550 distinct callers** across the binary — this is
+the base insert primitive for the engine's entire generic named-type/registry pattern (every DJB2-hashed
+subsystem/singleton registration everywhere funnels through it), far too broad and generic to be, or to
+meaningfully narrow down, a specific field dispatcher. This doesn't rule the idea out, but confirms it's a dead
+end at the *insert* side; if this general registry mechanism is indeed what the `Market.json` dispatcher uses
+under the hood, the productive next step would be finding its *lookup/read* counterpart function instead
+(a "get registered object by name-hash" sibling to this "insert by name-hash" function), not following this
+specific function's callers.
